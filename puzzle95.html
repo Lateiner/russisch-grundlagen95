@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Puzzle: 8 Level Bruchzahlen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .word-piece {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            user-select: none;
+        }
+        .word-piece:active { transform: scale(0.9); }
+        .slot { transition: all 0.3s ease; min-width: 120px; }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .error-shake { animation: shake 0.3s ease-in-out; border-color: #ef4444 !important; }
+        
+        .correct-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-6 px-4">
+
+    <!-- Header & Progress -->
+    <div class="max-w-3xl w-full text-center mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-800 mb-2">Bruchzahlen-Puzzle</h1>
+        <div class="flex justify-center items-center gap-4">
+            <div class="text-sm font-bold text-blue-600 uppercase tracking-widest" id="level-display">Level 1 / 8</div>
+            <div class="w-48 bg-slate-200 h-2 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-blue-500 h-full transition-all duration-500" style="width: 12.5%"></div>
+            </div>
+        </div>
+        <p class="text-slate-600 mt-4 font-medium" id="task-instruction">Bilde die Zahl: 1 ½ (Nominativ)</p>
+    </div>
+
+    <!-- Puzzle Board -->
+    <div class="max-w-4xl w-full bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-slate-200 relative overflow-hidden">
+        
+        <!-- Target Slots -->
+        <div id="target-area" class="flex flex-wrap justify-center gap-3 mb-10 min-h-[80px]">
+            <!-- Slots werden dynamisch generiert -->
+        </div>
+
+        <!-- Word Pool -->
+        <div class="border-t border-slate-100 pt-8">
+            <div class="text-center mb-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Verfügbare Wörter:</div>
+            <div id="word-pool" class="flex flex-wrap justify-center gap-3">
+                <!-- Wörter werden dynamisch generiert -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Area -->
+    <div id="feedback" class="mt-6 h-12 flex items-center justify-center font-bold text-center transition-all duration-300 opacity-0">
+    </div>
+
+    <!-- Navigation -->
+    <div class="mt-4">
+        <button id="next-btn" class="hidden bg-green-500 hover:bg-green-600 text-white px-10 py-4 rounded-full font-bold shadow-lg transition-all scale-105">
+            Nächstes Level →
+        </button>
+        <button id="restart-btn" class="mt-4 text-slate-400 hover:text-slate-600 text-sm underline block mx-auto">
+            Spiel zurücksetzen
+        </button>
+    </div>
+
+    <script>
+        const levels = [
+            { id: 1, label: "1 ½ (Nominativ)", words: ["одна", "целая", "одна", "вторая"] },
+            { id: 2, label: "2 ⅖ (Nominativ)", words: ["две", "целых", "две", "пятых"] },
+            { id: 3, label: "0,5 (Dezimalzahl)", words: ["ноль", "целых", "пять", "десятых"] },
+            { id: 4, label: "1 ½ (Genitiv - 'Es gibt kein...')", words: ["одной", "целой", "одной", "второй"] },
+            { id: 5, label: "1 ½ (Akkusativ - 'Ich sehe...')", words: ["одну", "целую", "одну", "вторую"] },
+            { id: 6, label: "0,05 (Dezimalzahl)", words: ["ноль", "целых", "пять", "сотых"] },
+            { id: 7, label: "2 ⅖ (Dativ - 'hinzufügen zu...')", words: ["двум", "целым", "двум", "пятым"] },
+            { id: 8, label: "0,005 (Dezimalzahl)", words: ["ноль", "целых", "пять", "тысячных"] }
+        ];
+
+        let currentLevelIndex = 0;
+        let placedWords = [];
+
+        const targetArea = document.getElementById('target-area');
+        const wordPool = document.getElementById('word-pool');
+        const feedback = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const levelDisplay = document.getElementById('level-display');
+        const taskInstruction = document.getElementById('task-instruction');
+        const progressBar = document.getElementById('progress-bar');
+
+        function loadLevel() {
+            const level = levels[currentLevelIndex];
+            placedWords = [];
+            nextBtn.classList.add('hidden');
+            feedback.classList.add('opacity-0');
+            
+            // UI Update
+            levelDisplay.innerText = `Level ${level.id} / 8`;
+            taskInstruction.innerText = `Bilde die Zahl: ${level.label}`;
+            progressBar.style.width = `${(level.id / 8) * 100}%`;
+
+            // Clear Areas
+            targetArea.innerHTML = '';
+            wordPool.innerHTML = '';
+
+            // Create Slots
+            level.words.forEach((_, i) => {
+                const slot = document.createElement('div');
+                slot.className = "slot h-14 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center p-2 text-[10px] text-slate-300 font-bold uppercase text-center";
+                slot.innerText = `${i + 1}. Wort`;
+                targetArea.appendChild(slot);
+            });
+
+            // Shuffle and Create Words
+            const shuffled = [...level.words].sort(() => Math.random() - 0.5);
+            shuffled.forEach(text => {
+                const btn = document.createElement('div');
+                btn.className = "word-piece bg-white border-2 border-blue-500 text-blue-700 px-5 py-2 rounded-xl font-bold text-lg shadow-sm hover:bg-blue-50";
+                btn.innerText = text;
+                btn.onclick = () => handleWordClick(btn, text);
+                wordPool.appendChild(btn);
+            });
+        }
+
+        function handleWordClick(element, text) {
+            const level = levels[currentLevelIndex];
+            const nextRequiredWord = level.words[placedWords.length];
+
+            if (text === nextRequiredWord) {
+                // Correct
+                const slots = targetArea.querySelectorAll('.slot');
+                const targetSlot = slots[placedWords.length];
+                
+                targetSlot.innerHTML = `<span class="text-blue-800 text-lg font-bold correct-pop">${text}</span>`;
+                targetSlot.className = "slot h-14 border-2 border-blue-500 bg-blue-50 rounded-xl flex items-center justify-center px-5 py-2 shadow-inner";
+                
+                element.classList.add('opacity-0', 'pointer-events-none');
+                placedWords.push(text);
+                
+                showFeedback("Richtig!", "text-green-600");
+
+                if (placedWords.length === level.words.length) {
+                    winLevel();
+                }
+            } else {
+                // Wrong
+                element.classList.add('error-shake');
+                setTimeout(() => element.classList.remove('error-shake'), 400);
+                showFeedback("Falsche Reihenfolge!", "text-red-500");
+            }
+        }
+
+        function winLevel() {
+            showFeedback("Level abgeschlossen! 🎉", "text-green-600 scale-110");
+            if (currentLevelIndex < levels.length - 1) {
+                nextBtn.classList.remove('hidden');
+            } else {
+                taskInstruction.innerHTML = "<span class='text-green-600'>🏆 Gratulation! Du hast alle Bruchzahlen-Puzzle gelöst!</span>";
+            }
+        }
+
+        function showFeedback(text, colorClass) {
+            feedback.innerText = text;
+            feedback.className = `mt-6 h-12 flex items-center justify-center font-bold text-center transition-all duration-300 opacity-100 ${colorClass}`;
+            if(text !== "Level abgeschlossen! 🎉") {
+                setTimeout(() => feedback.classList.add('opacity-0'), 1500);
+            }
+        }
+
+        nextBtn.onclick = () => {
+            currentLevelIndex++;
+            loadLevel();
+        };
+
+        document.getElementById('restart-btn').onclick = () => {
+            currentLevelIndex = 0;
+            loadLevel();
+        };
+
+        // Init Game
+        loadLevel();
+    </script>
+</body>
+</html>
