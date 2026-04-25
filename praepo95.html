@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Verben & Präpositionen (Verschwinden)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .match-card {
+            transition: all 1000ms cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .selected {
+            ring: 4px solid #6366f1;
+            background-color: #eef2ff;
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        /* Animation für das langsame Verschwinden */
+        .fade-out {
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
+        }
+        .correct-flash {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+        .error-shake {
+            animation: shake 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-6 px-4">
+
+    <!-- Header -->
+    <div class="max-w-3xl w-full text-center mb-10">
+        <h1 class="text-3xl font-black text-slate-800 mb-2">Verben & Präpositionen</h1>
+        <p class="text-slate-600">Finde die Paare. Korrekte Antworten verschwinden langsam.</p>
+        
+        <!-- Progress -->
+        <div class="mt-8 flex justify-center items-center gap-4">
+            <div class="h-3 w-48 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                <div id="progress-bar" class="bg-indigo-600 h-full transition-all duration-1000" style="width: 0%"></div>
+            </div>
+            <span id="score-text" class="text-sm font-bold text-slate-500 uppercase tracking-widest">0 / 8 Paare</span>
+        </div>
+    </div>
+
+    <!-- Match Grid -->
+    <div id="game-grid" class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
+        
+        <!-- Verbs Column -->
+        <div id="verbs-col" class="flex flex-col gap-3">
+            <h2 class="text-center text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Verb</h2>
+            <!-- Dynamisch gefüllt -->
+        </div>
+
+        <!-- Prepositions Column -->
+        <div id="preps-col" class="flex flex-col gap-3">
+            <h2 class="text-center text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Präposition</h2>
+            <!-- Dynamisch gefüllt -->
+        </div>
+
+    </div>
+
+    <!-- Final Message -->
+    <div id="win-message" class="fixed inset-0 bg-slate-50/95 flex flex-col items-center justify-center z-50 hidden transition-opacity duration-1000">
+        <div class="text-6xl mb-4">🏆</div>
+        <h2 class="text-4xl font-black text-slate-800 mb-8 text-center px-4">Hervorragend!<br>Alle 8 Paare zugeordnet.</h2>
+        <button onclick="location.reload()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-full font-bold shadow-xl transition-transform active:scale-95">
+            Nochmal spielen
+        </button>
+    </div>
+
+    <script>
+        const rawData = [
+            { verb: "прибавить", prep: "к (+ Dat.)", match: "k" },
+            { verb: "отнять", prep: "от (+ Gen.)", match: "ot" },
+            { verb: "вычесть", prep: "из (+ Gen.)", match: "iz" },
+            { verb: "разделить", prep: "на (+ Akk.)", match: "na" },
+            { verb: "умножить", prep: "на (+ Akk.)", match: "na" },
+            { verb: "прибавлять", prep: "к (+ Dat.)", match: "k" },
+            { verb: "отнимать", prep: "от (+ Gen.)", match: "ot" },
+            { verb: "вычитать", prep: "из (+ Gen.)", match: "iz" }
+        ];
+
+        let selectedVerb = null;
+        let selectedPrep = null;
+        let solvedCount = 0;
+
+        const verbsCol = document.getElementById('verbs-col');
+        const prepsCol = document.getElementById('preps-col');
+        const progressBar = document.getElementById('progress-bar');
+        const scoreText = document.getElementById('score-text');
+        const winMessage = document.getElementById('win-message');
+
+        function init() {
+            // Verben mischen und erstellen
+            const verbsShuffled = [...rawData].sort(() => Math.random() - 0.5);
+            verbsShuffled.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = "match-card bg-white border-2 border-slate-200 p-4 rounded-2xl shadow-sm text-center font-bold text-lg text-slate-700";
+                div.innerText = item.verb;
+                div.dataset.match = item.match;
+                div.onclick = () => selectItem(div, 'verb');
+                verbsCol.appendChild(div);
+            });
+
+            // Präpositionen mischen und erstellen
+            const prepsShuffled = [...rawData].sort(() => Math.random() - 0.5);
+            prepsShuffled.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = "match-card bg-white border-2 border-slate-200 p-4 rounded-2xl shadow-sm text-center font-bold text-lg text-indigo-600";
+                div.innerText = item.prep;
+                div.dataset.match = item.match;
+                div.onclick = () => selectItem(div, 'prep');
+                prepsCol.appendChild(div);
+            });
+        }
+
+        function selectItem(el, type) {
+            if (el.classList.contains('fade-out')) return;
+
+            if (type === 'verb') {
+                document.querySelectorAll('#verbs-col .match-card').forEach(v => v.classList.remove('selected'));
+                selectedVerb = el;
+            } else {
+                document.querySelectorAll('#preps-col .match-card').forEach(p => p.classList.remove('selected'));
+                selectedPrep = el;
+            }
+            el.classList.add('selected');
+
+            if (selectedVerb && selectedPrep) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const verb = selectedVerb;
+            const prep = selectedPrep;
+
+            if (verb.dataset.match === prep.dataset.match) {
+                // RICHTIG
+                solvedCount++;
+                verb.classList.add('correct-flash');
+                prep.classList.add('correct-flash');
+                verb.classList.remove('selected');
+                prep.classList.remove('selected');
+                
+                // Langsam verschwinden lassen
+                setTimeout(() => {
+                    verb.classList.add('fade-out');
+                    prep.classList.add('fade-out');
+                }, 500);
+
+                updateUI();
+                selectedVerb = null;
+                selectedPrep = null;
+
+                if (solvedCount === 8) {
+                    setTimeout(() => {
+                        winMessage.classList.remove('hidden');
+                        setTimeout(() => winMessage.classList.add('opacity-100'), 50);
+                    }, 1500);
+                }
+            } else {
+                // FALSCH
+                verb.classList.add('error-shake');
+                prep.classList.add('error-shake');
+                
+                setTimeout(() => {
+                    verb.classList.remove('error-shake', 'selected');
+                    prep.classList.remove('error-shake', 'selected');
+                }, 400);
+
+                selectedVerb = null;
+                selectedPrep = null;
+            }
+        }
+
+        function updateUI() {
+            scoreText.innerText = `${solvedCount} / 8 Paare`;
+            progressBar.style.width = `${(solvedCount / 8) * 100}%`;
+        }
+
+        init();
+    </script>
+</body>
+</html>
