@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Fall-Detektiv Mathematik</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .case-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .correct {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+        .wrong {
+            background-color: #ef4444 !important;
+            border-color: #dc2626 !important;
+            color: white !important;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-8">
+        <h1 class="text-3xl font-black text-slate-800 mb-2 tracking-tight">Fall-Detektiv 🔍</h1>
+        <p class="text-slate-600">Welchen Fall verlangt das Verb in diesem Zusammenhang?</p>
+        
+        <!-- Progress bar -->
+        <div class="mt-6 flex justify-between items-end mb-2">
+            <span id="level-text" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Frage 1 / 8</span>
+            <span id="score-text" class="text-xs font-bold text-blue-500 uppercase tracking-widest">Score: 0</span>
+        </div>
+        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden shadow-inner">
+            <div id="progress-bar" class="bg-blue-600 h-full transition-all duration-500" style="width: 12.5%"></div>
+        </div>
+    </div>
+
+    <!-- Quiz Card -->
+    <div class="max-w-xl w-full bg-white p-8 md:p-12 rounded-3xl shadow-xl border border-slate-200">
+        
+        <div id="quiz-content" class="animate-in">
+            <div class="text-center mb-10">
+                <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Verb & Präposition:</p>
+                <div id="verb-display" class="text-3xl md:text-4xl font-black text-blue-600 mb-2">прибавить к...</div>
+                <p id="context-hint" class="text-slate-500 italic text-sm">(hinzufügen zu...)</p>
+            </div>
+
+            <!-- Choice Buttons -->
+            <div class="grid grid-cols-1 gap-3">
+                <button onclick="checkAnswer('Genitiv', this)" class="case-btn py-4 rounded-2xl border-2 border-slate-200 font-bold text-lg text-slate-600 hover:bg-slate-50">
+                    Genitiv
+                </button>
+                <button onclick="checkAnswer('Dativ', this)" class="case-btn py-4 rounded-2xl border-2 border-slate-200 font-bold text-lg text-slate-600 hover:bg-slate-50">
+                    Dativ
+                </button>
+                <button onclick="checkAnswer('Akkusativ', this)" class="case-btn py-4 rounded-2xl border-2 border-slate-200 font-bold text-lg text-slate-600 hover:bg-slate-50">
+                    Akkusativ
+                </button>
+            </div>
+        </div>
+
+        <!-- Feedback Area -->
+        <div id="feedback-area" class="hidden mt-8 pt-6 border-t border-slate-100 text-center animate-in">
+            <p id="feedback-msg" class="text-lg font-bold mb-2"></p>
+            <p id="explanation" class="text-slate-600 text-sm mb-6 leading-relaxed"></p>
+            <button id="next-btn" onclick="nextQuestion()" class="bg-slate-800 text-white px-10 py-3 rounded-full font-bold hover:bg-slate-900 transition-all shadow-lg">
+                Nächster Fall →
+            </button>
+        </div>
+    </div>
+
+    <button onclick="location.reload()" class="mt-10 text-slate-400 hover:text-slate-600 text-xs font-bold underline uppercase tracking-widest transition-colors">
+        Quiz zurücksetzen
+    </button>
+
+    <script>
+        const questions = [
+            {
+                verb: "прибавить к...",
+                hint: "(hinzufügen zu...)",
+                correct: "Dativ",
+                info: "Richtig! Nach der Präposition 'к' folgt im Russischen immer der Dativ."
+            },
+            {
+                verb: "вычесть из...",
+                hint: "(subtrahieren aus...)",
+                correct: "Genitiv",
+                info: "Korrekt! 'из' verlangt den Genitiv (z. B. из одной целой)."
+            },
+            {
+                verb: "умножить на...",
+                hint: "(multiplizieren mit/auf...)",
+                correct: "Akkusativ",
+                info: "Sehr gut! 'на' steht hier mit dem Akkusativ (z. B. на одну вторую)."
+            },
+            {
+                verb: "отнять от...",
+                hint: "(abziehen von...)",
+                correct: "Genitiv",
+                info: "Richtig! Nach 'от' benutzt man im Russischen den Genitiv."
+            },
+            {
+                verb: "разделить на...",
+                hint: "(teilen durch/auf...)",
+                correct: "Akkusativ",
+                info: "Genau! Wie beim Multiplizieren folgt auf 'на' der Akkusativ."
+            },
+            {
+                verb: "прибавить (+ was?)",
+                hint: "(hinzufügen + direktes Objekt)",
+                correct: "Akkusativ",
+                info: "Stimmt! Wenn man direkt sagt, WAS man addiert (ohne Präposition), nutzt man den Akkusativ."
+            },
+            {
+                verb: "складывать",
+                hint: "(addieren / zusammenfügen)",
+                correct: "Akkusativ",
+                info: "Richtig! Man sagt 'складывать (+ was?) и (+ was?)' im Akkusativ."
+            },
+            {
+                verb: "вычитать (+ was?)",
+                hint: "(subtrahieren + direktes Objekt)",
+                correct: "Akkusativ",
+                info: "Hervorragend! Auch hier steht die Zahl, die man abzieht, im Akkusativ."
+            }
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let canClick = true;
+
+        const verbDisplay = document.getElementById('verb-display');
+        const contextHint = document.getElementById('context-hint');
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        const explanationEl = document.getElementById('explanation');
+        const progressBar = document.getElementById('progress-bar');
+        const levelText = document.getElementById('level-text');
+        const scoreText = document.getElementById('score-text');
+
+        function checkAnswer(choice, btn) {
+            if (!canClick) return;
+            canClick = false;
+
+            const currentQ = questions[currentIndex];
+            const isCorrect = (choice === currentQ.correct);
+
+            if (isCorrect) {
+                score++;
+                btn.classList.add('correct');
+                feedbackMsg.innerText = "Richtig kombiniert! 🕵️‍♂️";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-green-600";
+            } else {
+                btn.classList.add('wrong');
+                feedbackMsg.innerText = "Spur verloren... ❌";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-red-600";
+                
+                // Markiere die richtige Antwort
+                const buttons = document.querySelectorAll('.case-btn');
+                buttons.forEach(b => {
+                    if (b.innerText === currentQ.correct) b.classList.add('correct');
+                });
+            }
+
+            scoreText.innerText = `Score: ${score}`;
+            explanationEl.innerText = currentQ.info;
+            feedbackArea.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < questions.length) {
+                canClick = true;
+                feedbackArea.classList.add('hidden');
+                
+                // Buttons zurücksetzen
+                const buttons = document.querySelectorAll('.case-btn');
+                buttons.forEach(b => b.classList.remove('correct', 'wrong'));
+
+                // Neue Daten laden
+                const data = questions[currentIndex];
+                verbDisplay.innerText = data.verb;
+                contextHint.innerText = data.hint;
+                
+                // Progress
+                levelText.innerText = `Frage ${currentIndex + 1} / ${questions.length}`;
+                progressBar.style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
+            } else {
+                showFinal();
+            }
+        }
+
+        function showFinal() {
+            document.getElementById('quiz-content').innerHTML = `
+                <div class="text-center py-10">
+                    <div class="text-6xl mb-6">🏆</div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Ermittlung abgeschlossen!</h2>
+                    <p class="text-xl text-slate-600">Du hast ${score} von ${questions.length} Fällen korrekt bestimmt.</p>
+                </div>
+            `;
+            feedbackArea.classList.add('hidden');
+        }
+
+        // Initialer Start
+    </script>
+</body>
+</html>
