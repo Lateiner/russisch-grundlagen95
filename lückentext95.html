@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernmodul: Lückentext Bruchzahlen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .option-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .correct {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+        .wrong {
+            background-color: #ef4444 !important;
+            border-color: #dc2626 !important;
+            color: white !important;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+    </style>
+</head>
+<body class="bg-indigo-50 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-8">
+        <h1 class="text-3xl font-bold text-indigo-900 mb-2">Lückentext: Bruchzahlen</h1>
+        <p class="text-indigo-700">Wähle die korrekte Form der Ganzzahl passend zum Fall.</p>
+        
+        <div class="mt-6 flex justify-between items-end mb-2">
+            <span id="progress-text" class="text-xs font-bold text-indigo-500 uppercase tracking-widest">Satz 1 / 8</span>
+            <span id="score-text" class="text-xs font-bold text-indigo-500 uppercase tracking-widest">Score: 0</span>
+        </div>
+        <div class="w-full bg-indigo-200 h-2.5 rounded-full overflow-hidden shadow-inner">
+            <div id="progress-bar" class="bg-indigo-600 h-full transition-all duration-500" style="width: 12.5%"></div>
+        </div>
+    </div>
+
+    <!-- Quiz Card -->
+    <div class="max-w-3xl w-full bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-indigo-100">
+        
+        <div id="quiz-content" class="animate-in">
+            <!-- Sentence Area -->
+            <div class="bg-indigo-50 p-6 rounded-2xl mb-8 text-center">
+                <p id="sentence-display" class="text-xl md:text-2xl text-indigo-900 leading-relaxed">
+                    <!-- Satz wird hier geladen -->
+                </p>
+            </div>
+
+            <!-- Options Grid -->
+            <div id="options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Buttons werden hier geladen -->
+            </div>
+        </div>
+
+        <!-- Feedback & Info -->
+        <div id="feedback-area" class="hidden mt-8 pt-6 border-t border-slate-100 text-center animate-in">
+            <p id="feedback-msg" class="text-lg font-bold mb-2"></p>
+            <p id="explanation" class="text-slate-600 text-sm mb-6 leading-relaxed"></p>
+            <button id="next-btn" class="bg-indigo-600 text-white px-10 py-3 rounded-full font-bold hover:bg-indigo-700 transition-all shadow-md">
+                Nächster Satz →
+            </button>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <button id="restart-btn" class="mt-10 text-indigo-400 hover:text-indigo-600 text-sm font-bold underline uppercase tracking-widest transition-colors">
+        Quiz zurücksetzen
+    </button>
+
+    <script>
+        const sentences = [
+            {
+                before: "Нет ",
+                after: " двух пятых.",
+                options: ["двух целых", "две целых", "двум целым"],
+                correct: 0,
+                info: "Richtig! 'Нет' verlangt den Genitiv. Bei 2 steht 'целых' im Plural."
+            },
+            {
+                before: "Прибавить к ",
+                after: " двум пятым.",
+                options: ["двух целых", "двум целым", "двумя целыми"],
+                correct: 1,
+                info: "Korrekt! 'К' verlangt den Dativ. Aus 'две' wird 'двум' und aus 'целых' wird 'целым'."
+            },
+            {
+                before: "Мы работаем с ",
+                after: " двумя пятыми.",
+                options: ["двух целых", "две целые", "двумя целыми"],
+                correct: 2,
+                info: "Sehr gut! 'С' (mit) verlangt den Instrumental: 'двумя целыми'."
+            },
+            {
+                before: "Я вижу ",
+                after: " две пятых.",
+                options: ["две целых", "двух целых", "двум целым"],
+                correct: 0,
+                info: "Richtig! Im Akkusativ Plural bleiben die Formen oft wie im Nominativ."
+            },
+            {
+                before: "Расскажи о ",
+                after: " двух пятых.",
+                options: ["две целых", "двум целым", "двух целых"],
+                correct: 2,
+                info: "Genau! 'О' (über) verlangt den Präpositional: 'двух целых'."
+            },
+            {
+                before: "Вычесть из ",
+                after: " пяти десятых.",
+                options: ["пяти целых", "пять целых", "пятью целыми"],
+                correct: 0,
+                info: "Richtig! 'Из' verlangt den Genitiv: 'пяти целых'."
+            },
+            {
+                before: "Результат с ",
+                after: " тремя восьмыми.",
+                options: ["три целых", "трех целых", "тремя целыми"],
+                correct: 2,
+                info: "Ausgezeichnet! Instrumental Plural: 'тремя целыми'."
+            },
+            {
+                before: "Прибавить к ",
+                after: " einer второй.",
+                options: ["одна целая", "одной целой", "одну целую"],
+                correct: 1,
+                info: "Richtig! Hier war der Singular gefragt (Dativ): 'одной целой'."
+            }
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let canClick = true;
+
+        const sentenceDisplay = document.getElementById('sentence-display');
+        const optionsGrid = document.getElementById('options-grid');
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        const explanationEl = document.getElementById('explanation');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const scoreText = document.getElementById('score-text');
+        const restartBtn = document.getElementById('restart-btn');
+
+        function loadSentence() {
+            const data = sentences[currentIndex];
+            canClick = true;
+            feedbackArea.classList.add('hidden');
+            
+            // UI Update
+            progressText.innerText = `Satz ${currentIndex + 1} / ${sentences.length}`;
+            progressBar.style.width = `${((currentIndex + 1) / sentences.length) * 100}%`;
+            
+            // Set sentence with placeholder
+            sentenceDisplay.innerHTML = `${data.before}<span class="border-b-2 border-indigo-400 px-4 text-indigo-600 font-bold">...</span>${data.after}`;
+
+            // Set options
+            optionsGrid.innerHTML = '';
+            data.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn bg-white border-2 border-indigo-100 p-4 rounded-xl font-bold text-indigo-800 shadow-sm hover:border-indigo-300";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(idx, btn);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(idx, btn) {
+            if (!canClick) return;
+            canClick = false;
+
+            const data = sentences[currentIndex];
+            const isCorrect = (idx === data.correct);
+
+            if (isCorrect) {
+                score++;
+                btn.classList.add('correct');
+                feedbackMsg.innerText = "Richtig! ✨";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-green-600";
+                sentenceDisplay.innerHTML = `${data.before}<span class="text-green-600 font-bold">${data.options[idx]}</span>${data.after}`;
+            } else {
+                btn.classList.add('wrong');
+                feedbackMsg.innerText = "Nicht ganz... ❌";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-red-600";
+                // Mark correct one
+                optionsGrid.children[data.correct].classList.add('correct');
+            }
+
+            scoreText.innerText = `Score: ${score}`;
+            explanationEl.innerText = data.info;
+            feedbackArea.classList.remove('hidden');
+        }
+
+        nextBtn.onclick = () => {
+            currentIndex++;
+            if (currentIndex < sentences.length) {
+                loadSentence();
+            } else {
+                showFinalResults();
+            }
+        };
+
+        function showFinalResults() {
+            const content = document.getElementById('quiz-content');
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="text-6xl mb-6">🏆</div>
+                    <h2 class="text-3xl font-bold text-indigo-900 mb-2">Geschafft!</h2>
+                    <p class="text-xl text-indigo-700">Du hast ${score} von ${sentences.length} Sätzen korrekt gelöst.</p>
+                </div>
+            `;
+            feedbackArea.classList.add('hidden');
+        }
+
+        restartBtn.onclick = () => location.reload();
+
+        // Initial Start
+        loadSentence();
+    </script>
+</body>
+</html>
