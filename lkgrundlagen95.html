@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vokabel-Lernkartei: Bruchzahlen & Mathematik</title>
+    <style>
+        /* --- CSS STYLING --- */
+        :root {
+            --primary-green: #2e7d32;
+            --light-green: #e8f5e9;
+            --accent-green: #4caf50;
+            --hover-green: #1b5e20;
+            --card-front: #ffffff;
+            --card-back: #f1f8e9;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-green);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: screen;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-green);
+            margin-bottom: 10px;
+        }
+
+        .progress {
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: var(--primary-green);
+            font-size: 1.1rem;
+        }
+
+        /* Flashcard 3D Effect */
+        .flashcard-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 300px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .flashcard {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            padding: 20px;
+            box-sizing: border-box;
+            border: 2px solid var(--accent-green);
+        }
+
+        .card-front {
+            background-color: var(--card-front);
+        }
+
+        .card-back {
+            background-color: var(--card-back);
+            transform: rotateY(180deg);
+        }
+
+        /* Vokabel Styling */
+        .russian {
+            font-weight: bold;
+            color: var(--primary-green);
+        }
+
+        .german {
+            color: var(--text-color);
+        }
+
+        /* Buttons Area */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            background-color: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            min-width: 120px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: var(--primary-green);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-nav {
+            background-color: var(--primary-green);
+        }
+
+        .btn-secondary {
+            background-color: #616161;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #424242;
+        }
+
+        /* Info Text */
+        .instructions {
+            margin-top: 30px;
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* Keyboard Icons */
+        kbd {
+            background-color: #eee;
+            border-radius: 3px;
+            border: 1px solid #b4b4b4;
+            box-shadow: 0 1px 1px rgba(0,0,0,.2);
+            color: #333;
+            display: inline-block;
+            font-size: .85em;
+            font-weight: 700;
+            line-height: 1;
+            padding: 2px 4px;
+            white-space: nowrap;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .flashcard-container {
+                height: 250px;
+            }
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Russisch Lernkartei</h1>
+        <div class="progress" id="progress">1 / 50</div>
+
+        <div class="flashcard-container" id="cardContainer" onclick="flipCard()">
+            <div class="flashcard" id="cardElement">
+                <div class="card-face card-front">
+                    <div class="russian" id="frontText">Загрузка...</div>
+                </div>
+                <div class="card-face card-back">
+                    <div class="german" id="backText">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-nav" onclick="prevCard()">← Vorherige</button>
+            <button class="btn-nav" onclick="nextCard()">Nächste →</button>
+            <button onclick="shuffleCards()">Mischen</button>
+            <button class="btn-secondary" onclick="toStart()">An den Anfang</button>
+        </div>
+
+        <div class="instructions">
+            Bedienung: <kbd>Leertaste</kbd> / <kbd>Enter</kbd> zum Umdrehen | <kbd>←</kbd> <kbd>→</kbd> zum Navigieren | <kbd>Pos1</kbd> zum Anfang
+        </div>
+    </div>
+
+    <script>
+        /* --- DATA --- */
+        const originalVocabulary = [
+            {ru: "дро́бное число́", de: "Bruchzahl"},
+            {ru: "числи́тельное", de: "Zahlwort"},
+            {ru: "количе́ственное числи́тельное", de: "Kardinalzahl (Grundzahl)"},
+            {ru: "поря́дковое числи́тельное", de: "Ordinalzahl (Ordnungszahl)"},
+            {ru: "це́лая", de: "Ganze (Singular)"},
+            {ru: "це́лых", de: "Ganze (Plural)"},
+            {ru: "втора́я", de: "Zweite (als Nenner)"},
+            {ru: "тре́тья", de: "Dritte"},
+            {ru: "четвёртая", de: "Vierte"},
+            {ru: "пя́тая", de: "Fünfte"},
+            {ru: "деся́тая", de: "Zehntel (eine Nachkommastelle, Singular)"},
+            {ru: "деся́тых", de: "Zehntel (Plural)"},
+            {ru: "со́тая", de: "Hundertstel (zwei Nachkommastellen, Singular)"},
+            {ru: "со́тых", de: "Hundertstel (Plural)"},
+            {ru: "ты́сячная", de: "Tausendstel (drei Nachkommastellen, Singular)"},
+            {ru: "ты́сячных", de: "Tausendstel (Plural)"},
+            {ru: "ноль / нуль", de: "Null"},
+            {ru: "одна́", de: "eine (feminin)"},
+            {ru: "две", de: "zwei (feminin)"},
+            {ru: "три", de: "drei"},
+            {ru: "четы́ре", de: "vier"},
+            {ru: "пять", de: "fünf"},
+            {ru: "деся́ть", de: "zehn"},
+            {ru: "запята́я", de: "Komma"},
+            {ru: "скла́дывать / сложи́ть", de: "addieren / zusammenfügen"},
+            {ru: "прибавля́ть / приба́вить", de: "hinzufügen / plusrechnen"},
+            {ru: "вычита́ть / вы́честь", de: "subtrahieren"},
+            {ru: "отнима́ть / отня́ть", de: "abziehen / minusrechnen"},
+            {ru: "умножа́ть / умно́жить", de: "multiplizieren / malnehmen"},
+            {ru: "дели́ть / раздели́ть", de: "dividieren / teilen"},
+            {ru: "плюс", de: "Plus"},
+            {ru: "ми́нус", de: "Minus"},
+            {ru: "равно́", de: "gleich (beim Ergebnis)"},
+            {ru: "приме́р", de: "Rechenaufgabe / Beispiel"},
+            {ru: "уро́к матема́тики", de: "Mathematikunterricht"},
+            {ru: "паде́ж", de: "Fall / Kasus"},
+            {ru: "склоне́ние", de: "Deklination"},
+            {ru: "изменя́ть / измени́ть", de: "verändern / abwandeln"},
+            {ru: "имени́тельный паде́ж", de: "Nominativ"},
+            {ru: "роди́тельный паде́ж", de: "Genitiv"},
+            {ru: "да́тельный паде́ж", de: "Dativ"},
+            {ru: "вини́тельный паде́ж", de: "Akkusativ"},
+            {ru: "твори́тельный паде́ж", de: "Instrumental"},
+            {ru: "предло́жный паде́ж", de: "Präpositional"},
+            {ru: "еди́нственное число́", de: "Singular (Einzahl)"},
+            {ru: "мно́жественное число́", de: "Plural (Mehrzahl)"},
+            {ru: "оконча́ние", de: "Endung"},
+            {ru: "предло́г", de: "Präposition"},
+            {ru: "прилага́тельное", de: "Adjektiv"},
+            {ru: "ци́фра", de: "Ziffer"}
+        ];
+
+        /* --- LOGIK --- */
+        let cards = [...originalVocabulary];
+        let currentIndex = 0;
+
+        const cardElement = document.getElementById('cardElement');
+        const frontText = document.getElementById('frontText');
+        const backText = document.getElementById('backText');
+        const progress = document.getElementById('progress');
+
+        function updateCard() {
+            // Karte zurückdrehen bevor Inhalt gewechselt wird
+            cardElement.classList.remove('flipped');
+            
+            setTimeout(() => {
+                const cardData = cards[currentIndex];
+                frontText.innerText = cardData.ru;
+                backText.innerText = cardData.de;
+                progress.innerText = `${currentIndex + 1} / ${cards.length}`;
+                
+                adjustFontSize(frontText, cardData.ru);
+                adjustFontSize(backText, cardData.de);
+            }, currentIndex === 0 && !cardElement.classList.contains('flipped') ? 0 : 150);
+        }
+
+        function adjustFontSize(element, text) {
+            // Dynamische Schriftgröße basierend auf Textlänge
+            if (text.length > 40) {
+                element.style.fontSize = "1.2rem";
+            } else if (text.length > 25) {
+                element.style.fontSize = "1.5rem";
+            } else {
+                element.style.fontSize = "2rem";
+            }
+        }
+
+        function flipCard() {
+            cardElement.classList.toggle('flipped');
+        }
+
+        function nextCard() {
+            if (currentIndex < cards.length - 1) {
+                currentIndex++;
+                updateCard();
+            }
+        }
+
+        function prevCard() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateCard();
+            }
+        }
+
+        function toStart() {
+            currentIndex = 0;
+            updateCard();
+        }
+
+        function shuffleCards() {
+            // Fisher-Yates Shuffle
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
+            }
+            currentIndex = 0;
+            updateCard();
+        }
+
+        // Tastatursteuerung
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'Space':
+                case 'Enter':
+                    e.preventDefault(); // Scrollen verhindern
+                    flipCard();
+                    break;
+                case 'ArrowLeft':
+                    prevCard();
+                    break;
+                case 'ArrowRight':
+                    nextCard();
+                    break;
+                case 'Home':
+                    toStart();
+                    break;
+            }
+        });
+
+        // Initialisierung
+        updateCard();
+
+    </script>
+</body>
+</html>
