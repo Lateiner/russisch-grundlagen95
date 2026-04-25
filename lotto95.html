@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lotto: Dezimalbrüche</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .lotto-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .lotto-card:hover:not(:disabled) {
+            transform: scale(1.02);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .correct {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+        .wrong {
+            background-color: #ef4444 !important;
+            border-color: #dc2626 !important;
+            color: white !important;
+        }
+        @keyframes pulse-custom {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .animate-pulse-custom {
+            animation: pulse-custom 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-8">
+        <h1 class="text-3xl font-black text-gray-800 mb-2">Числовое лото</h1>
+        <p class="text-gray-600">Wähle die richtige geschriebene Form für die Ziffer im Display.</p>
+        
+        <div class="mt-6 flex justify-between items-center bg-white p-3 rounded-xl shadow-sm">
+            <span id="round-text" class="text-xs font-bold text-gray-400 uppercase tracking-widest">Runde 1 / 8</span>
+            <div class="flex gap-1">
+                <div id="dot-1" class="w-2 h-2 rounded-full bg-gray-200 transition-colors"></div>
+                <div id="dot-2" class="w-2 h-2 rounded-full bg-gray-200 transition-colors"></div>
+                <div id="dot-3" class="w-2 h-2 rounded-full bg-gray-200 transition-colors"></div>
+                <div id="dot-4" class="w-2 h-2 rounded-full bg-gray-200 transition-colors"></div>
+                <div id="dot-5" class="w-2 h-2 rounded-full bg-gray-200 transition-colors"></div>
+                <div id="dot-6" class="w-2 h-2 rounded-full bg-gray-200 transition-colors"></div>
+                <div id="dot-7" class="w-2 h-2 rounded-full bg-gray-200 transition-colors"></div>
+                <div id="dot-8" class="w-2 h-2 rounded-full bg-gray-200 transition-colors"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lotto Display (Digit) -->
+    <div class="max-w-md w-full mb-10">
+        <div class="bg-black rounded-3xl p-8 shadow-2xl border-8 border-gray-800 flex flex-col items-center justify-center animate-pulse-custom">
+            <div class="text-xs text-green-500 font-mono mb-2 uppercase tracking-widest opacity-50">Digital Display</div>
+            <div id="digit-display" class="text-6xl md:text-7xl font-mono text-green-400 tracking-tighter">
+                0,05
+            </div>
+        </div>
+    </div>
+
+    <!-- Lotto Cards (Written forms) -->
+    <div id="cards-grid" class="max-w-4xl w-full grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+        <!-- Buttons werden hier geladen -->
+    </div>
+
+    <!-- Feedback Message -->
+    <div id="feedback" class="h-12 flex items-center justify-center text-xl font-bold transition-all duration-300 opacity-0 mb-6">
+    </div>
+
+    <!-- Controls -->
+    <div class="flex gap-4">
+        <button id="next-btn" class="hidden bg-gray-800 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-gray-900 transition-all">
+            Nächste Runde
+        </button>
+        <button onclick="location.reload()" class="bg-white border-2 border-gray-200 text-gray-400 px-6 py-4 rounded-full font-bold hover:bg-gray-50 transition-all text-xs uppercase tracking-widest">
+            Neustart
+        </button>
+    </div>
+
+    <script>
+        const gameData = [
+            { digit: "0,5", correct: "ноль целых пять десятых", options: ["ноль целых пять сотых", "ноль целая пять десятых", "ноль целых пять тысячных"] },
+            { digit: "0,05", correct: "ноль целых пять сотых", options: ["ноль целых пять десятых", "одна целая пять сотых", "ноль целых пять тысячных"] },
+            { digit: "0,005", correct: "ноль целых пять тысячных", options: ["ноль целых пять десятых", "ноль целых пять сотых", "ноль целых пятьдесят тысячных"] },
+            { digit: "0,1", correct: "ноль целых одна десятая", options: ["ноль целых одна сотая", "ноль целых один десятых", "ноль целых одна тысячная"] },
+            { digit: "0,01", correct: "ноль целых одна сотая", options: ["ноль целых одна десятая", "ноль целая одна сотая", "ноль целых одна тысячная"] },
+            { digit: "0,001", correct: "ноль целых одна тысячная", options: ["ноль целых одна десятая", "ноль целых одна сотая", "ноль целых один тысячных"] },
+            { digit: "0,2", correct: "ноль целых две десятых", options: ["ноль целых два десятых", "ноль целых две сотых", "две целых две десятых"] },
+            { digit: "0,02", correct: "ноль целых две сотых", options: ["ноль целых две десятых", "ноль целых два сотых", "ноль целых две тысячных"] }
+        ];
+
+        let currentRound = 0;
+        let canClick = true;
+
+        const digitDisplay = document.getElementById('digit-display');
+        const cardsGrid = document.getElementById('cards-grid');
+        const feedback = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const roundText = document.getElementById('round-text');
+
+        function loadRound() {
+            const data = gameData[currentRound];
+            canClick = true;
+            feedback.classList.add('opacity-0');
+            nextBtn.classList.add('hidden');
+            digitDisplay.innerText = data.digit;
+            roundText.innerText = `Runde ${currentRound + 1} / 8`;
+            
+            // Mark dots
+            document.getElementById(`dot-${currentRound + 1}`).classList.add('bg-green-500');
+
+            // Combine correct answer with wrong ones and shuffle
+            const allOptions = [data.correct, ...data.options].sort(() => Math.random() - 0.5);
+
+            cardsGrid.innerHTML = '';
+            allOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "lotto-card bg-white border-2 border-gray-200 p-6 rounded-2xl text-lg md:text-xl font-bold text-gray-700 shadow-sm";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(opt, btn);
+                cardsGrid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, btn) {
+            if (!canClick) return;
+            canClick = false;
+
+            const correct = gameData[currentRound].correct;
+
+            if (selected === correct) {
+                btn.classList.add('correct');
+                showFeedback("Правильно! ✨", "text-green-600");
+                
+                if (currentRound < gameData.length - 1) {
+                    nextBtn.classList.remove('hidden');
+                } else {
+                    showFeedback("Вы выиграли в лото! 🏆", "text-blue-600");
+                }
+            } else {
+                btn.classList.add('wrong');
+                showFeedback("Попробуйте еще раз! ❌", "text-red-600");
+                
+                // Show the correct one
+                Array.from(cardsGrid.children).forEach(child => {
+                    if (child.innerText === correct) child.classList.add('correct');
+                });
+                
+                if (currentRound < gameData.length - 1) {
+                    nextBtn.classList.remove('hidden');
+                }
+            }
+        }
+
+        function showFeedback(text, colorClass) {
+            feedback.innerText = text;
+            feedback.className = `h-12 flex items-center justify-center text-2xl font-bold transition-all duration-300 opacity-100 ${colorClass}`;
+        }
+
+        nextBtn.onclick = () => {
+            currentRound++;
+            loadRound();
+        };
+
+        // Init
+        loadRound();
+    </script>
+</body>
+</html>
