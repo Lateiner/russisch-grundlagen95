@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Hörverstehen: Dezimalbrüche</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .digit-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .digit-card:hover:not(:disabled) {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .correct {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+        .wrong {
+            background-color: #ef4444 !important;
+            border-color: #dc2626 !important;
+            color: white !important;
+        }
+        .play-btn {
+            animation: pulse-slow 2s infinite;
+        }
+        @keyframes pulse-slow {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-8">
+        <h1 class="text-3xl font-black text-slate-800 mb-2 tracking-tight">Hörverstehen 🎧</h1>
+        <p class="text-slate-600">Höre die russische Zahl und wähle die passende Ziffer.</p>
+        
+        <div class="mt-6 flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm">
+            <span id="progress-text" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Frage 1 / 8</span>
+            <div id="stars" class="flex gap-1 text-slate-200 text-lg">
+                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Player Area -->
+    <div class="max-w-md w-full bg-white p-10 rounded-3xl shadow-xl border border-slate-200 flex flex-col items-center mb-10">
+        <button id="play-audio-btn" class="play-btn w-24 h-24 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-lg transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </button>
+        <p class="mt-4 text-xs font-bold text-blue-500 uppercase tracking-widest">Anklicken zum Hören</p>
+    </div>
+
+    <!-- Options Grid -->
+    <div id="options-grid" class="max-w-4xl w-full grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+        <!-- Ziffernkarten werden hier geladen -->
+    </div>
+
+    <!-- Feedback -->
+    <div id="feedback" class="h-12 flex items-center justify-center text-xl font-bold transition-all duration-300 opacity-0 mb-6 text-center px-4">
+    </div>
+
+    <!-- Controls -->
+    <div class="flex gap-4">
+        <button id="next-btn" class="hidden bg-slate-800 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-slate-900 transition-all">
+            Nächste Frage →
+        </button>
+        <button onclick="location.reload()" class="bg-white border-2 border-slate-200 text-slate-400 px-6 py-4 rounded-full font-bold hover:bg-slate-50 transition-all text-xs uppercase tracking-widest">
+            Neustart
+        </button>
+    </div>
+
+    <script>
+        const quizData = [
+            { text: "ноль целых пять десятых", digit: "0,5", alts: ["0,05", "5,0"] },
+            { text: "ноль целых пять сотых", digit: "0,05", alts: ["0,5", "0,005"] },
+            { text: "одна целая две десятых", digit: "1,2", alts: ["1,02", "12,0"] },
+            { text: "ноль целых одна десятая", digit: "0,1", alts: ["1,0", "0,01"] },
+            { text: "ноль целых одна сотая", digit: "0,01", alts: ["0,1", "0,001"] },
+            { text: "ноль целых одна тысячная", digit: "0,001", alts: ["0,01", "0,1"] },
+            { text: "две целых zwei десятых", digit: "2,2", alts: ["2,02", "0,22"] },
+            { text: "десять целых пять сотых", digit: "10,05", alts: ["10,5", "1,005"] }
+        ];
+
+        let currentIdx = 0;
+        let canClick = true;
+        let score = 0;
+        let russianVoice = null;
+
+        const playBtn = document.getElementById('play-audio-btn');
+        const optionsGrid = document.getElementById('options-grid');
+        const feedback = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const progressText = document.getElementById('progress-text');
+        const stars = document.getElementById('stars').children;
+
+        // Sprach-Engine initialisieren
+        function initVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            // Suche russische Stimmen
+            const ruVoices = voices.filter(v => v.lang.startsWith('ru'));
+            // Versuche eine männliche Stimme zu finden (viele heißen Pavel, Yuri, Aleksandr oder enthalten 'Male')
+            russianVoice = ruVoices.find(v => 
+                v.name.toLowerCase().includes('pavel') || 
+                v.name.toLowerCase().includes('yuri') || 
+                v.name.toLowerCase().includes('aleksandr') ||
+                v.name.toLowerCase().includes('male')
+            ) || ruVoices[0]; // Fallback auf erste verfügbare russische Stimme
+        }
+
+        // Stimmen werden oft verzögert geladen
+        window.speechSynthesis.onvoiceschanged = initVoices;
+        initVoices();
+
+        function speak() {
+            if (!russianVoice) initVoices();
+            const utterance = new SpeechSynthesisUtterance(quizData[currentIdx].text);
+            utterance.voice = russianVoice;
+            utterance.rate = 0.85; // Etwas langsamer für besseres Verständnis
+            utterance.pitch = 0.9; // Etwas tiefer für männlichen Klang
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function loadTask() {
+            const data = quizData[currentIdx];
+            canClick = true;
+            feedback.classList.add('opacity-0');
+            nextBtn.classList.add('hidden');
+            progressText.innerText = `Frage ${currentIdx + 1} / 8`;
+
+            const allOptions = [data.digit, ...data.alts].sort(() => Math.random() - 0.5);
+
+            optionsGrid.innerHTML = '';
+            allOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "digit-card bg-white border-2 border-slate-200 p-8 rounded-3xl text-3xl font-black text-slate-700 shadow-sm";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(opt, btn);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, btn) {
+            if (!canClick) return;
+            canClick = false;
+
+            const correct = quizData[currentIdx].digit;
+
+            if (selected === correct) {
+                score++;
+                btn.classList.add('correct');
+                stars[currentIdx].classList.add('text-yellow-400');
+                showFeedback("Richtig! Отлично! ✨", "text-green-600");
+                
+                if (currentIdx < quizData.length - 1) {
+                    nextBtn.classList.remove('hidden');
+                } else {
+                    showFeedback("🏆 Großartig! Du hast alle Zahlen verstanden.", "text-blue-600");
+                }
+            } else {
+                btn.classList.add('wrong');
+                stars[currentIdx].classList.add('text-red-400');
+                showFeedback(`Das war: ${quizData[currentIdx].text} ❌`, "text-red-600");
+                
+                // Korrekte Lösung markieren
+                Array.from(optionsGrid.children).forEach(child => {
+                    if (child.innerText === correct) child.classList.add('correct');
+                });
+                
+                if (currentIdx < quizData.length - 1) {
+                    nextBtn.classList.remove('hidden');
+                }
+            }
+        }
+
+        function showFeedback(text, colorClass) {
+            feedback.innerText = text;
+            feedback.className = `h-12 flex items-center justify-center text-xl font-bold transition-all duration-300 opacity-100 ${colorClass}`;
+        }
+
+        playBtn.onclick = speak;
+        nextBtn.onclick = () => {
+            currentIdx++;
+            loadTask();
+        };
+
+        // Initialisierung
+        setTimeout(loadTask, 500);
+    </script>
+</body>
+</html>
