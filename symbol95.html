@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Mathe-Symbole & Verben</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .match-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .selected {
+            ring: 4px solid #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .correct-flash {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+        .fade-out {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+        }
+        .error-shake {
+            animation: shake 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-10 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-10">
+        <h1 class="text-3xl font-extrabold text-slate-800 mb-2">Rechenarten zuordnen</h1>
+        <p class="text-slate-600">Verbinde die Symbole mit den passenden Verben.</p>
+        
+        <div class="mt-6 flex justify-center items-center gap-4">
+            <div class="h-2 w-32 bg-slate-200 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-blue-500 h-full transition-all duration-700" style="width: 0%"></div>
+            </div>
+            <span id="score-text" class="text-xs font-bold text-slate-400 uppercase tracking-widest">0 / 4 Paare</span>
+        </div>
+    </div>
+
+    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-10">
+        
+        <!-- Symbols Column -->
+        <div class="flex flex-col gap-4">
+            <h2 class="text-center text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Symbol</h2>
+            <div id="sym-plus" data-match="add" class="match-card bg-white border-2 border-slate-200 p-6 rounded-2xl flex items-center justify-center text-4xl shadow-sm text-slate-700 font-bold">+</div>
+            <div id="sym-minus" data-match="sub" class="match-card bg-white border-2 border-slate-200 p-6 rounded-2xl flex items-center justify-center text-4xl shadow-sm text-slate-700 font-bold">−</div>
+            <div id="sym-mult" data-match="mult" class="match-card bg-white border-2 border-slate-200 p-6 rounded-2xl flex items-center justify-center text-4xl shadow-sm text-slate-700 font-bold">×</div>
+            <div id="sym-div" data-match="div" class="match-card bg-white border-2 border-slate-200 p-6 rounded-2xl flex items-center justify-center text-4xl shadow-sm text-slate-700 font-bold">÷</div>
+        </div>
+
+        <!-- Verbs Column -->
+        <div id="verbs-container" class="flex flex-col gap-4">
+            <h2 class="text-center text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Verb (russisch)</h2>
+            <!-- Wird per JS befüllt -->
+        </div>
+
+    </div>
+
+    <!-- Win Message -->
+    <div id="win-overlay" class="fixed inset-0 bg-slate-900/90 flex flex-col items-center justify-center z-50 hidden transition-opacity duration-1000 opacity-0">
+        <div class="text-6xl mb-6">🧮</div>
+        <h2 class="text-4xl font-bold text-white mb-8 text-center">Mathematik-Profi!</h2>
+        <button onclick="location.reload()" class="bg-blue-500 hover:bg-blue-600 text-white px-10 py-4 rounded-full font-bold text-lg shadow-2xl transition-transform active:scale-95">
+            Nochmal spielen
+        </button>
+    </div>
+
+    <script>
+        const verbData = [
+            { id: "v-add", match: "add", text: "складывать / сложить" },
+            { id: "v-sub", match: "sub", text: "вычитать / вычесть" },
+            { id: "v-mult", match: "mult", text: "умножать / умножить" },
+            { id: "v-div", match: "div", text: "делить / разделить" }
+        ];
+
+        let selectedSymbol = null;
+        let selectedVerb = null;
+        let solvedCount = 0;
+
+        const verbsContainer = document.getElementById('verbs-container');
+        const progressBar = document.getElementById('progress-bar');
+        const scoreText = document.getElementById('score-text');
+        const winOverlay = document.getElementById('win-overlay');
+
+        function init() {
+            // Verben mischen und erstellen
+            const shuffled = [...verbData].sort(() => Math.random() - 0.5);
+            shuffled.forEach(verb => {
+                const div = document.createElement('div');
+                div.className = "match-card bg-white border-2 border-slate-200 p-6 rounded-2xl flex items-center justify-center text-lg md:text-xl shadow-sm text-blue-700 font-bold text-center";
+                div.innerText = verb.text;
+                div.dataset.match = verb.match;
+                div.onclick = () => selectItem(div, 'verb');
+                verbsContainer.appendChild(div);
+            });
+
+            // Symbole klickbar machen
+            document.querySelectorAll('[id^="sym-"]').forEach(el => {
+                el.onclick = () => selectItem(el, 'symbol');
+            });
+        }
+
+        function selectItem(el, type) {
+            if (el.classList.contains('fade-out')) return;
+
+            if (type === 'symbol') {
+                document.querySelectorAll('[id^="sym-"]').forEach(s => s.classList.remove('selected'));
+                selectedSymbol = el;
+            } else {
+                document.querySelectorAll('#verbs-container .match-card').forEach(v => v.classList.remove('selected'));
+                selectedVerb = el;
+            }
+            el.classList.add('selected');
+
+            if (selectedSymbol && selectedVerb) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const sym = selectedSymbol;
+            const verb = selectedVerb;
+
+            if (sym.dataset.match === verb.dataset.match) {
+                // RICHTIG
+                solvedCount++;
+                sym.classList.add('correct-flash');
+                verb.classList.add('correct-flash');
+                sym.classList.remove('selected');
+                verb.classList.remove('selected');
+
+                setTimeout(() => {
+                    sym.classList.add('fade-out');
+                    verb.classList.add('fade-out');
+                }, 600);
+
+                updateUI();
+                
+                selectedSymbol = null;
+                selectedVerb = null;
+
+                if (solvedCount === 4) {
+                    setTimeout(showWin, 1200);
+                }
+            } else {
+                // FALSCH
+                sym.classList.add('error-shake');
+                verb.classList.add('error-shake');
+                
+                setTimeout(() => {
+                    sym.classList.remove('error-shake', 'selected');
+                    verb.classList.remove('error-shake', 'selected');
+                }, 400);
+
+                selectedSymbol = null;
+                selectedVerb = null;
+            }
+        }
+
+        function updateUI() {
+            scoreText.innerText = `${solvedCount} / 4 Paare`;
+            progressBar.style.width = `${(solvedCount / 4) * 100}%`;
+        }
+
+        function showWin() {
+            winOverlay.classList.remove('hidden');
+            setTimeout(() => winOverlay.classList.add('opacity-100'), 10);
+        }
+
+        init();
+    </script>
+</body>
+</html>
