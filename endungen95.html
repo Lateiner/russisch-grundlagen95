@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Kasus-Matching (Verschwinden)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .match-item {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            user-select: none;
+        }
+        .selected {
+            ring: 4px solid #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(1.03);
+            z-index: 10;
+        }
+        /* Animation für das Verschwinden */
+        .fade-out {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+        }
+        .correct-flash {
+            border-color: #22c55e !important;
+            background-color: #f0fdf4 !important;
+            color: #16a34a !important;
+        }
+        .error-shake {
+            animation: shake 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-4xl w-full text-center mb-8">
+        <h1 class="text-3xl font-bold text-slate-800 mb-2">Kasus-Matching</h1>
+        <p class="text-slate-600">Finde die Paare. Korrekte Antworten verschwinden langsam.</p>
+        
+        <div class="mt-6 flex justify-center items-center gap-4">
+            <div class="h-3 w-48 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                <div id="progress-bar" class="bg-blue-500 h-full transition-all duration-700" style="width: 0%"></div>
+            </div>
+            <span id="score" class="text-sm font-bold text-slate-500 uppercase">0 / 6 Paare</span>
+        </div>
+    </div>
+
+    <div class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
+        
+        <!-- Linke Spalte: Kasus -->
+        <div class="flex flex-col gap-3" id="cases-column">
+            <h2 class="text-center text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Kasus / Fall</h2>
+            <div data-match="nom" class="match-item bg-white border-2 border-slate-200 p-4 rounded-2xl font-bold text-slate-700 shadow-sm text-center">Nominativ</div>
+            <div data-match="gen" class="match-item bg-white border-2 border-slate-200 p-4 rounded-2xl font-bold text-slate-700 shadow-sm text-center">Genitiv</div>
+            <div data-match="dat" class="match-item bg-white border-2 border-slate-200 p-4 rounded-2xl font-bold text-slate-700 shadow-sm text-center">Dativ</div>
+            <div data-match="acc" class="match-item bg-white border-2 border-slate-200 p-4 rounded-2xl font-bold text-slate-700 shadow-sm text-center">Akkusativ</div>
+            <div data-match="ins" class="match-item bg-white border-2 border-slate-200 p-4 rounded-2xl font-bold text-slate-700 shadow-sm text-center">Instrumental</div>
+            <div data-match="pre" class="match-item bg-white border-2 border-slate-200 p-4 rounded-2xl font-bold text-slate-700 shadow-sm text-center">Präpositional</div>
+        </div>
+
+        <!-- Rechte Spalte: Russische Formen -->
+        <div class="flex flex-col gap-3" id="forms-column">
+            <h2 class="text-center text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Russische Form (1 ½)</h2>
+            <!-- Wird per JS befüllt -->
+        </div>
+
+    </div>
+
+    <!-- End-Nachricht -->
+    <div id="win-message" class="fixed inset-0 bg-white/90 z-50 flex flex-col items-center justify-center hidden transition-opacity duration-1000">
+        <h2 class="text-4xl font-black text-blue-600 mb-4 text-center px-4">Ausgezeichnet!<br>Alle Paare gefunden.</h2>
+        <button onclick="location.reload()" class="bg-blue-600 text-white px-10 py-4 rounded-full font-bold shadow-xl hover:bg-blue-700 transition-transform hover:scale-110">
+            Nochmal spielen
+        </button>
+    </div>
+
+    <script>
+        // Daten Definition
+        const formsData = [
+            { text: "одна целая одна вторая", type: "nom" },
+            { text: "одной целой einer второй", type: "gen" },
+            { text: "одной целой einer второй", type: "dat" },
+            { text: "одну целую одну вторую", type: "acc" },
+            { text: "одной целой einer второй", type: "ins" },
+            { text: "одной целой einer второй", type: "pre" }
+        ];
+
+        let selectedCase = null;
+        let selectedForm = null;
+        let solvedCount = 0;
+
+        const formsColumn = document.getElementById('forms-column');
+        const progressBar = document.getElementById('progress-bar');
+        const scoreDisplay = document.getElementById('score');
+        const winMessage = document.getElementById('win-message');
+
+        function init() {
+            // Formen mischen und anzeigen
+            const shuffled = [...formsData].sort(() => Math.random() - 0.5);
+            shuffled.forEach(data => {
+                const div = document.createElement('div');
+                div.className = "match-item bg-white border-2 border-blue-100 p-4 rounded-2xl font-bold text-blue-800 shadow-sm text-center text-lg";
+                div.innerText = data.text;
+                div.dataset.match = data.type;
+                div.onclick = () => selectItem(div, 'form');
+                formsColumn.appendChild(div);
+            });
+
+            // Click-Events für die linke Spalte (Kasus)
+            document.querySelectorAll('#cases-column .match-item').forEach(el => {
+                el.onclick = () => selectItem(el, 'case');
+            });
+        }
+
+        function selectItem(el, category) {
+            if (el.classList.contains('fade-out')) return;
+
+            if (category === 'case') {
+                document.querySelectorAll('#cases-column .match-item').forEach(c => c.classList.remove('selected'));
+                selectedCase = el;
+            } else {
+                document.querySelectorAll('#forms-column .match-item').forEach(f => f.classList.remove('selected'));
+                selectedForm = el;
+            }
+            el.classList.add('selected');
+
+            if (selectedCase && selectedForm) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const c = selectedCase;
+            const f = selectedForm;
+
+            if (c.dataset.match === f.dataset.match) {
+                // Erfolg
+                solvedCount++;
+                c.classList.add('correct-flash');
+                f.classList.add('correct-flash');
+                c.classList.remove('selected');
+                f.classList.remove('selected');
+
+                // Langsam verschwinden lassen nach kurzem Highlight
+                setTimeout(() => {
+                    c.classList.add('fade-out');
+                    f.classList.add('fade-out');
+                }, 600);
+
+                updateUI();
+                
+                selectedCase = null;
+                selectedForm = null;
+
+                if (solvedCount === 6) {
+                    setTimeout(() => {
+                        winMessage.classList.remove('hidden');
+                        winMessage.classList.add('opacity-100');
+                    }, 1200);
+                }
+            } else {
+                // Fehler
+                c.classList.add('error-shake');
+                f.classList.add('error-shake');
+                
+                setTimeout(() => {
+                    c.classList.remove('error-shake', 'selected');
+                    f.classList.remove('error-shake', 'selected');
+                }, 400);
+
+                selectedCase = null;
+                selectedForm = null;
+            }
+        }
+
+        function updateUI() {
+            scoreDisplay.innerText = `${solvedCount} / 6 Paare`;
+            progressBar.style.width = `${(solvedCount / 6) * 100}%`;
+        }
+
+        init();
+    </script>
+</body>
+</html>
