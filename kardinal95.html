@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Kardinalzahlen-Check</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .option-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .correct {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+        .wrong {
+            background-color: #ef4444 !important;
+            border-color: #dc2626 !important;
+            color: white !important;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-8">
+        <h1 class="text-3xl font-bold text-slate-800 mb-2">Kardinalzahlen-Check</h1>
+        <p class="text-slate-600">Beuge die Grundzahlen (2, 5...) innerhalb der Brüche korrekt.</p>
+        
+        <!-- Progress Bar -->
+        <div class="mt-6 flex justify-between items-end mb-2">
+            <span id="progress-text" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Frage 1 / 8</span>
+            <span id="score-text" class="text-xs font-bold text-blue-500 uppercase tracking-widest">Score: 0</span>
+        </div>
+        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden shadow-inner">
+            <div id="progress-bar" class="bg-blue-600 h-full transition-all duration-500" style="width: 12.5%"></div>
+        </div>
+    </div>
+
+    <!-- Quiz Card -->
+    <div class="max-w-xl w-full bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-slate-200">
+        
+        <div id="quiz-content" class="animate-in">
+            <!-- Question Area -->
+            <div class="mb-8 text-center">
+                <p id="context-label" class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2">Dativ (zu...)</p>
+                <h2 id="question-text" class="text-xl md:text-2xl font-semibold text-slate-700 leading-relaxed">
+                    Welche Form von "две" (2) ist korrekt für den Dativ?
+                </h2>
+            </div>
+
+            <!-- Options -->
+            <div id="options-container" class="grid grid-cols-1 gap-3">
+                <!-- Buttons werden hier geladen -->
+            </div>
+        </div>
+
+        <!-- Feedback Area -->
+        <div id="feedback-area" class="hidden mt-8 pt-6 border-t border-slate-100 text-center animate-in">
+            <p id="feedback-msg" class="text-lg font-bold mb-2"></p>
+            <p id="explanation" class="text-slate-500 text-sm mb-6 leading-relaxed"></p>
+            <button id="next-btn" class="bg-slate-800 text-white px-10 py-3 rounded-full font-bold hover:bg-slate-900 transition-all shadow-md">
+                Nächste Frage →
+            </button>
+        </div>
+    </div>
+
+    <!-- Restart -->
+    <button id="restart-btn" class="mt-10 text-slate-400 hover:text-slate-600 text-xs font-bold underline uppercase tracking-widest transition-colors">
+        Quiz neu starten
+    </button>
+
+    <script>
+        const questions = [
+            {
+                context: "Dativ (zu / к)",
+                q: "Welche Form von 'две' (2) ist korrekt für den Dativ?",
+                options: ["две", "двух", "двум"],
+                correct: 2,
+                info: "Richtig! Im Dativ wird 'две' zu 'двум' (z.B. к двум целым...)."
+            },
+            {
+                context: "Genitiv (ohne / нет)",
+                q: "Welche Form von 'две' (2) brauchst du für den Genitiv?",
+                options: ["двух", "двум", "две"],
+                correct: 0,
+                info: "Korrekt! Der Genitiv von 'две' ist 'двух'."
+            },
+            {
+                context: "Instrumental (mit / с)",
+                q: "Wie heißt 'две' (2) im Instrumental?",
+                options: ["двух", "двумя", "двум"],
+                correct: 1,
+                info: "Sehr gut! 'С двумя целыми...' ist die Form für den Instrumental."
+            },
+            {
+                context: "Nominativ (Wer/Was?)",
+                q: "Was ist die Grundform (Nominativ) von 2 in '2 ⅖'?",
+                options: ["два", "две", "двух"],
+                correct: 1,
+                info: "Richtig! Da wir von 'Teilen' (Teil = weiblich) sprechen, nutzen wir die feminine Form 'две'."
+            },
+            {
+                context: "Genitiv (von / от)",
+                q: "Welche Form von 'пять' (5) ist im Genitiv korrekt?",
+                options: ["пять", "пяти", "пятью"],
+                correct: 1,
+                info: "Genau! Zahlen von 5 bis 20 enden in den meisten indirekten Fällen auf -и."
+            },
+            {
+                context: "Instrumental (mit / с)",
+                q: "Wie lautet 'пять' (5) im Instrumental?",
+                options: ["пяти", "пять", "пятью"],
+                correct: 2,
+                info: "Richtig! Im Instrumental erhält die 5 die Endung -ью."
+            },
+            {
+                context: "Dativ (zu / к)",
+                q: "Wie lautet die 5 (пять) im Dativ?",
+                options: ["пяти", "пять", "пятью"],
+                correct: 0,
+                info: "Korrekt! Dativ, Genitiv und Präpositional sind bei der 5 identisch: 'пяти'."
+            },
+            {
+                context: "Akkusativ (Ich sehe...)",
+                q: "Welche Form hat 'две' (2) im Akkusativ bei unbelebten Dingen?",
+                options: ["две", "двух", "двум"],
+                correct: 0,
+                info: "Sehr gut! Bei unbelebten Dingen (wie Zahlen oder Teilen) gleicht der Akkusativ dem Nominativ: 'две'."
+            }
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let canClick = true;
+
+        const contextLabel = document.getElementById('context-label');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        const explanationEl = document.getElementById('explanation');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const scoreText = document.getElementById('score-text');
+        const restartBtn = document.getElementById('restart-btn');
+
+        function loadQuestion() {
+            const data = questions[currentIndex];
+            canClick = true;
+            feedbackArea.classList.add('hidden');
+            
+            // UI Update
+            progressText.innerText = `Frage ${currentIndex + 1} / ${questions.length}`;
+            progressBar.style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
+            contextLabel.innerText = data.context;
+            questionText.innerText = data.q;
+
+            // Options
+            optionsContainer.innerHTML = '';
+            data.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn bg-white border-2 border-slate-200 p-4 rounded-2xl font-bold text-slate-700 shadow-sm hover:border-blue-400 hover:bg-blue-50";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(idx, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(idx, btn) {
+            if (!canClick) return;
+            canClick = false;
+
+            const data = questions[currentIndex];
+            const isCorrect = (idx === data.correct);
+
+            if (isCorrect) {
+                score++;
+                btn.classList.add('correct');
+                feedbackMsg.innerText = "Richtig! ✨";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-green-600";
+            } else {
+                btn.classList.add('wrong');
+                feedbackMsg.innerText = "Nicht ganz... ❌";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-red-600";
+                // Zeige richtige Antwort
+                optionsContainer.children[data.correct].classList.add('correct');
+            }
+
+            scoreText.innerText = `Score: ${score}`;
+            explanationEl.innerText = data.info;
+            feedbackArea.classList.remove('hidden');
+        }
+
+        nextBtn.onclick = () => {
+            currentIndex++;
+            if (currentIndex < questions.length) {
+                loadQuestion();
+            } else {
+                showFinal();
+            }
+        };
+
+        function showFinal() {
+            const content = document.getElementById('quiz-content');
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="text-5xl mb-4">🎯</div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Check beendet!</h2>
+                    <p class="text-xl text-slate-600">Du hast ${score} von ${questions.length} Punkten erreicht.</p>
+                </div>
+            `;
+            feedbackArea.classList.add('hidden');
+        }
+
+        restartBtn.onclick = () => location.reload();
+
+        loadQuestion();
+    </script>
+</body>
+</html>
