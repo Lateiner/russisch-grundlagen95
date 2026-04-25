@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lektion: Akkusativ-Check</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .option-btn {
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .correct {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+        .wrong {
+            background-color: #ef4444 !important;
+            border-color: #dc2626 !important;
+            color: white !important;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide {
+            animation: slideIn 0.4s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-8">
+        <h1 class="text-3xl font-bold text-slate-800 mb-2">Akkusativ-Check</h1>
+        <p class="text-slate-600 italic">Schwerpunkt: Die Endungen -у / -ую</p>
+        
+        <!-- Progress -->
+        <div class="mt-6 w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+            <div id="progress-bar" class="bg-blue-500 h-full transition-all duration-500" style="width: 12.5%"></div>
+        </div>
+        <div class="flex justify-between mt-2">
+            <span id="level-text" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Aufgabe 1 / 8</span>
+            <span id="score-text" class="text-xs font-bold text-blue-500 uppercase tracking-widest">Punkte: 0</span>
+        </div>
+    </div>
+
+    <!-- Quiz Card -->
+    <div class="max-w-2xl w-full bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-slate-200">
+        
+        <div id="quiz-container" class="animate-slide">
+            <h2 id="question" class="text-xl font-semibold text-slate-700 mb-8 text-center leading-relaxed">
+                <!-- Frage wird hier eingefügt -->
+            </h2>
+
+            <div id="options" class="flex flex-col gap-3">
+                <!-- Buttons werden hier eingefügt -->
+            </div>
+        </div>
+
+        <!-- Result / Explanation Area -->
+        <div id="feedback-area" class="hidden mt-8 pt-6 border-t border-slate-100 text-center animate-slide">
+            <p id="feedback-msg" class="text-lg font-bold mb-2"></p>
+            <p id="explanation" class="text-slate-600 text-sm mb-6 leading-relaxed"></p>
+            <button id="next-btn" class="bg-slate-800 text-white px-10 py-3 rounded-full font-bold hover:bg-slate-900 transition-all shadow-md">
+                Weiter →
+            </button>
+        </div>
+    </div>
+
+    <button onclick="location.reload()" class="mt-8 text-slate-400 hover:text-slate-600 text-xs underline uppercase tracking-widest">
+        Quiz zurücksetzen
+    </button>
+
+    <script>
+        const quizData = [
+            {
+                q: "Wähle die korrekte Akkusativ-Form von 1 ½ (z.B. für 'Ich sehe...')",
+                options: ["одна целая одна вторая", "одну целую одну вторую", "одной целой одной второй"],
+                correct: 1,
+                info: "Richtig! Im Akkusativ ändern sich alle Wörter auf -у / -ую."
+            },
+            {
+                q: "Welche Endung bekommt das Wort 'одна' im Akkusativ?",
+                options: ["одной", "одну", "одна"],
+                correct: 1,
+                info: "Richtig! 'одна' (Kardinalzahl) wird wie ein Substantiv auf -у dekliniert."
+            },
+            {
+                q: "Welche Endung bekommt das Adjektiv 'целая' im Akkusativ?",
+                options: ["целой", "целую", "целая"],
+                correct: 1,
+                info: "Genau! Wie bei normalen Adjektiven (femininer Akkusativ) lautet die Endung -ую."
+            },
+            {
+                q: "Vervollständige: Я вижу ... (1 ½) часть.",
+                options: ["одну целую одну вторую", "одна целая одна вторая", "одной целой одной второй"],
+                correct: 0,
+                info: "Sehr gut! 'Ich sehe' verlangt den Akkusativ."
+            },
+            {
+                q: "Welches dieser Wörter ist KEINE Akkusativ-Form?",
+                options: ["одну", "целую", "одной"],
+                correct: 2,
+                info: "Richtig. 'одной' ist Genitiv, Dativ, Instrumental oder Präpositional."
+            },
+            {
+                q: "Was ist der Akkusativ von 0,5 (ноль целых пять десятых)?",
+                options: ["ноль целых пять десятых", "ноля целых пять десятых", "нолю целых пять десятых"],
+                correct: 0,
+                info: "Aufgepasst! Bei 'Null Ganze' bleibt der Akkusativ gleich wie der Nominativ."
+            },
+            {
+                q: "Vervollständige: Мы купили ... (1 ½) арбуза.",
+                options: ["одну целую одну вторую", "одной целой одной второй", "одна целая одна вторая"],
+                correct: 0,
+                info: "Korrekt! 'Kaufen' verlangt den Akkusativ."
+            },
+            {
+                q: "Welche Endung hat die Ordinalzahl 'вторая' im Akkusativ?",
+                options: ["второй", "вторая", "вторую"],
+                correct: 2,
+                info: "Richtig! Auch die Ordinalzahl folgt dem Muster der Adjektive: -ую."
+            }
+        ];
+
+        let currentIdx = 0;
+        let score = 0;
+        let canClick = true;
+
+        const questionEl = document.getElementById('question');
+        const optionsEl = document.getElementById('options');
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        const explanationEl = document.getElementById('explanation');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const levelText = document.getElementById('level-text');
+        const scoreText = document.getElementById('score-text');
+
+        function loadTask() {
+            const data = quizData[currentIdx];
+            questionEl.innerText = data.q;
+            optionsEl.innerHTML = '';
+            feedbackArea.classList.add('hidden');
+            canClick = true;
+
+            levelText.innerText = `Aufgabe ${currentIdx + 1} / ${quizData.length}`;
+            progressBar.style.width = `${((currentIdx + 1) / quizData.length) * 100}%`;
+
+            data.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full text-left p-4 rounded-xl border-2 border-slate-200 font-medium text-slate-700 hover:bg-slate-50";
+                btn.innerText = opt;
+                btn.onclick = () => selectOption(index, btn);
+                optionsEl.appendChild(btn);
+            });
+        }
+
+        function selectOption(idx, btn) {
+            if (!canClick) return;
+            canClick = false;
+
+            const data = quizData[currentIdx];
+            const isCorrect = idx === data.correct;
+
+            if (isCorrect) {
+                score++;
+                btn.classList.add('correct');
+                feedbackMsg.innerText = "Korrekt! ✅";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-green-600";
+            } else {
+                btn.classList.add('wrong');
+                feedbackMsg.innerText = "Leider falsch ❌";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-red-600";
+                // Zeige richtige Option
+                optionsEl.children[data.correct].classList.add('correct');
+            }
+
+            scoreText.innerText = `Punkte: ${score}`;
+            explanationEl.innerText = data.info;
+            feedbackArea.classList.remove('hidden');
+        }
+
+        nextBtn.onclick = () => {
+            currentIdx++;
+            if (currentIdx < quizData.length) {
+                loadTask();
+            } else {
+                showFinal();
+            }
+        };
+
+        function showFinal() {
+            const container = document.querySelector('.max-w-2xl.bg-white');
+            container.innerHTML = `
+                <div class="text-center py-10">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-4">Check beendet!</h2>
+                    <p class="text-xl text-slate-600 mb-8">Du hast ${score} von ${quizData.length} Aufgaben richtig gelöst.</p>
+                    <div class="text-6xl mb-8">${score > 6 ? '🏆' : '👍'}</div>
+                    <button onclick="location.reload()" class="bg-blue-600 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-blue-700 transition-all">
+                        Nochmal starten
+                    </button>
+                </div>
+            `;
+        }
+
+        loadTask();
+    </script>
+</body>
+</html>
