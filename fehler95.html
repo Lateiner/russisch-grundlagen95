@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lektion: Fehlersuche</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .word-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .correct-find {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+            transform: scale(1.05);
+        }
+        .wrong-click {
+            animation: shake 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+            color: #ef4444 !important;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-6">
+        <h1 class="text-3xl font-bold text-slate-800 mb-2">Fehlersuche</h1>
+        <p class="text-slate-600 italic">Finde das Wort, das NICHT in die Liste passt.</p>
+        
+        <div class="mt-6 flex flex-col gap-2">
+            <div class="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <span id="level-text">Runde 1 / 8</span>
+                <span id="score-text">Gefunden: 0</span>
+            </div>
+            <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-indigo-500 h-full transition-all duration-500" style="width: 12.5%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Card -->
+    <div class="max-w-3xl w-full bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-slate-200">
+        
+        <div id="game-content" class="animate-in">
+            <h2 class="text-center text-slate-500 text-sm font-bold uppercase mb-8 tracking-wide">
+                Alle Wörter sollten die Endung <span class="text-indigo-600">-ОЙ</span> haben. Eines ist falsch:
+            </h2>
+
+            <div id="word-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Wörter werden hier eingefügt -->
+            </div>
+        </div>
+
+        <!-- Feedback -->
+        <div id="feedback-area" class="hidden mt-8 pt-6 border-t border-slate-100 text-center animate-in">
+            <p id="feedback-msg" class="text-lg font-bold mb-1"></p>
+            <p id="explanation" class="text-slate-500 text-sm mb-6"></p>
+            <button id="next-btn" class="bg-slate-800 text-white px-10 py-3 rounded-full font-bold hover:bg-slate-900 transition-all">
+                Nächste Runde →
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const levels = [
+            {
+                words: ["одной целой", "одной целой", "одна целая", "одной целой"],
+                errorIndex: 2,
+                info: "'одна целая' ist Nominativ. Die anderen sind Genitiv, Dativ, Instrumental oder Präpositional."
+            },
+            {
+                words: ["одной второй", "одну вторую", "одной второй", "одной второй"],
+                errorIndex: 1,
+                info: "'одну вторую' ist Akkusativ. Hier ist die Endung immer -ую."
+            },
+            {
+                words: ["одной целой", "одной целой", "одной целой", "одну целую"],
+                errorIndex: 3,
+                info: "Richtig! 'одну целую' gehört zum Akkusativ."
+            },
+            {
+                words: ["одна вторая", "одной второй", "одной второй", "одной второй"],
+                errorIndex: 0,
+                info: "'одна вторая' ist die Grundform (Nominativ)."
+            },
+            {
+                words: ["одной целой", "одна целая", "одной целой", "одной целой"],
+                errorIndex: 1,
+                info: "Gut erkannt! Der Nominativ passt nicht in diese Reihe."
+            },
+            {
+                words: ["одной второй", "одной второй", "одну вторую", "одной второй"],
+                errorIndex: 2,
+                info: "Korrekt. Im Akkusativ lautet der Nenner 'вторую'."
+            },
+            {
+                words: ["одной целой", "одной целой", "одна целая", "одной целой"],
+                errorIndex: 2,
+                info: "Wieder der Nominativ als Eindringling gefunden."
+            },
+            {
+                words: ["одной второй", "одну вторую", "одной второй", "одной второй"],
+                errorIndex: 1,
+                info: "Perfekt! Du hast alle Fehler identifiziert."
+            }
+        ];
+
+        let currentLevel = 0;
+        let score = 0;
+        let canClick = true;
+
+        const wordGrid = document.getElementById('word-grid');
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        const explanationEl = document.getElementById('explanation');
+        const nextBtn = document.getElementById('next-btn');
+        const levelText = document.getElementById('level-text');
+        const scoreText = document.getElementById('score-text');
+        const progressBar = document.getElementById('progress-bar');
+
+        function loadLevel() {
+            const data = levels[currentLevel];
+            wordGrid.innerHTML = '';
+            feedbackArea.classList.add('hidden');
+            canClick = true;
+
+            levelText.innerText = `Runde ${currentLevel + 1} / ${levels.length}`;
+            progressBar.style.width = `${((currentLevel + 1) / levels.length) * 100}%`;
+
+            data.words.forEach((word, index) => {
+                const btn = document.createElement('button');
+                btn.className = "word-btn p-4 rounded-2xl border-2 border-slate-200 bg-white font-bold text-slate-700 text-lg shadow-sm hover:border-indigo-200";
+                btn.innerText = word;
+                btn.onclick = () => handleChoice(index, btn);
+                wordGrid.appendChild(btn);
+            });
+        }
+
+        function handleChoice(index, btn) {
+            if (!canClick) return;
+            const data = levels[currentLevel];
+
+            if (index === data.errorIndex) {
+                // RICHTIG (Fehler gefunden)
+                canClick = false;
+                score++;
+                scoreText.innerText = `Gefunden: ${score}`;
+                btn.classList.add('correct-find');
+                feedbackMsg.innerText = "Fehler gefunden! ✅";
+                feedbackMsg.className = "text-lg font-bold mb-1 text-green-600";
+                explanationEl.innerText = data.info;
+                feedbackArea.classList.remove('hidden');
+            } else {
+                // FALSCH (Ein korrektes Wort angeklickt)
+                btn.classList.add('wrong-click');
+                setTimeout(() => btn.classList.remove('wrong-click'), 400);
+            }
+        }
+
+        nextBtn.onclick = () => {
+            currentLevel++;
+            if (currentLevel < levels.length) {
+                loadLevel();
+            } else {
+                showFinal();
+            }
+        };
+
+        function showFinal() {
+            const card = document.querySelector('.max-w-3xl.bg-white');
+            card.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="text-6xl mb-6">🔍</div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Suche abgeschlossen!</h2>
+                    <p class="text-slate-600 mb-8 text-xl">Du hast alle ${score} Fehler im System entdeckt.</p>
+                    <button onclick="location.reload()" class="bg-indigo-600 text-white px-12 py-4 rounded-full font-bold shadow-lg hover:bg-indigo-700 transition-all transform hover:scale-105">
+                        Nochmal spielen
+                    </button>
+                </div>
+            `;
+        }
+
+        loadLevel();
+    </script>
+</body>
+</html>
