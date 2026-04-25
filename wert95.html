@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Dezimalbrüche Stellenwerte</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .digit-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .selected {
+            ring: 4px solid #f59e0b; /* amber-500 */
+            background-color: #fffbeb; /* amber-50 */
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .drop-zone {
+            transition: all 0.3s ease;
+        }
+        .correct-pop {
+            animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .error-shake {
+            animation: shake 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-6 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-8">
+        <h1 class="text-3xl font-black text-slate-800 mb-2 tracking-tight">Dezimalbrüche 0,5...</h1>
+        <p class="text-slate-600 italic">Ordne die Ziffern dem richtigen Stellenwert zu.</p>
+        
+        <!-- Progress Bar -->
+        <div class="mt-6 flex justify-between items-end mb-2">
+            <span id="score-text" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Gelöst: 0 / 6</span>
+            <span class="text-xs font-bold text-amber-500 uppercase tracking-widest">Stellenwerte</span>
+        </div>
+        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden shadow-inner">
+            <div id="progress-bar" class="bg-amber-500 h-full transition-all duration-700" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <!-- Main Game Area -->
+    <div class="max-w-4xl w-full flex flex-col gap-8">
+        
+        <!-- Digit Cards (The Source) -->
+        <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-200">
+            <p class="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Wähle eine Zahl:</p>
+            <div id="digit-pool" class="flex flex-wrap justify-center gap-3">
+                <!-- Zahlen werden hier geladen -->
+            </div>
+        </div>
+
+        <!-- Category Baskets (The Targets) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- Zehntel -->
+            <div onclick="handleTargetClick('десятых')" class="drop-zone bg-white border-2 border-dashed border-slate-200 rounded-2xl p-4 flex flex-col items-center cursor-pointer hover:border-amber-400 hover:bg-amber-50/50">
+                <div class="text-amber-600 font-black text-xl mb-1 uppercase tracking-tighter">десятых</div>
+                <div class="text-slate-400 text-[10px] uppercase font-bold mb-4">1 Nachkommastelle</div>
+                <div id="list-десятых" class="flex flex-wrap justify-center gap-2"></div>
+            </div>
+
+            <!-- Hundertstel -->
+            <div onclick="handleTargetClick('сотых')" class="drop-zone bg-white border-2 border-dashed border-slate-200 rounded-2xl p-4 flex flex-col items-center cursor-pointer hover:border-amber-400 hover:bg-amber-50/50">
+                <div class="text-amber-600 font-black text-xl mb-1 uppercase tracking-tighter">сотых</div>
+                <div class="text-slate-400 text-[10px] uppercase font-bold mb-4">2 Nachkommastellen</div>
+                <div id="list-сотых" class="flex flex-wrap justify-center gap-2"></div>
+            </div>
+
+            <!-- Tausendstel -->
+            <div onclick="handleTargetClick('тысячных')" class="drop-zone bg-white border-2 border-dashed border-slate-200 rounded-2xl p-4 flex flex-col items-center cursor-pointer hover:border-amber-400 hover:bg-amber-50/50">
+                <div class="text-amber-600 font-black text-xl mb-1 uppercase tracking-tighter">тысячных</div>
+                <div class="text-slate-400 text-[10px] uppercase font-bold mb-4">3 Nachkommastellen</div>
+                <div id="list-тысячных" class="flex flex-wrap justify-center gap-2"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Feedback Message -->
+    <div id="feedback" class="mt-8 h-8 font-bold text-center transition-all duration-300 opacity-0">
+    </div>
+
+    <!-- Controls -->
+    <button onclick="location.reload()" class="mt-4 text-slate-400 hover:text-amber-600 text-xs font-bold underline uppercase tracking-widest transition-colors">
+        Aufgabe zurücksetzen
+    </button>
+
+    <script>
+        const gameData = [
+            { val: "0,5", type: "десятых" },
+            { val: "0,2", type: "десятых" },
+            { val: "0,05", type: "сотых" },
+            { val: "0,15", type: "сотых" },
+            { val: "0,005", type: "тысячных" },
+            { val: "0,001", type: "тысячных" }
+        ];
+
+        let selectedDigit = null;
+        let solvedCount = 0;
+
+        const digitPool = document.getElementById('digit-pool');
+        const feedback = document.getElementById('feedback');
+        const progressBar = document.getElementById('progress-bar');
+        const scoreText = document.getElementById('score-text');
+
+        function init() {
+            // Karten mischen
+            const shuffled = [...gameData].sort(() => Math.random() - 0.5);
+            shuffled.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = "digit-card bg-slate-100 border-2 border-slate-200 px-6 py-3 rounded-xl font-bold text-xl text-slate-700 shadow-sm";
+                div.innerText = item.val;
+                div.dataset.type = item.type;
+                div.onclick = (e) => {
+                    e.stopPropagation();
+                    selectDigit(div);
+                };
+                digitPool.appendChild(div);
+            });
+        }
+
+        function selectDigit(el) {
+            document.querySelectorAll('.digit-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedDigit = el;
+        }
+
+        function handleTargetClick(targetType) {
+            if (!selectedDigit) {
+                showFeedback("Wähle zuerst eine Zahl oben aus!", "text-slate-400");
+                return;
+            }
+
+            if (selectedDigit.dataset.type === targetType) {
+                // RICHTIG
+                const list = document.getElementById(`list-${targetType}`);
+                const tag = document.createElement('div');
+                tag.className = "bg-amber-500 text-white px-3 py-1 rounded-lg font-bold text-sm correct-pop shadow-sm";
+                tag.innerText = selectedDigit.innerText;
+                list.appendChild(tag);
+
+                selectedDigit.classList.add('opacity-0', 'pointer-events-none');
+                selectedDigit.classList.remove('selected');
+                selectedDigit = null;
+                
+                solvedCount++;
+                updateUI();
+                showFeedback("Richtig! ✨", "text-green-600");
+
+                if (solvedCount === 6) {
+                    setTimeout(() => showFeedback("🏆 Perfekt! Du hast alle Stellenwerte richtig zugeordnet.", "text-amber-600 scale-110"), 500);
+                }
+            } else {
+                // FALSCH
+                const zone = event.currentTarget;
+                zone.classList.add('error-shake');
+                setTimeout(() => zone.classList.remove('error-shake'), 400);
+                showFeedback("Falsch! Zähle die Stellen nach dem Komma.", "text-red-500");
+                
+                selectedDigit.classList.remove('selected');
+                selectedDigit = null;
+            }
+        }
+
+        function updateUI() {
+            scoreText.innerText = `Gelöst: ${solvedCount} / 6`;
+            progressBar.style.width = `${(solvedCount / 6) * 100}%`;
+        }
+
+        function showFeedback(text, colorClass) {
+            feedback.innerText = text;
+            feedback.className = `mt-8 h-8 font-bold text-center transition-all duration-300 opacity-100 ${colorClass}`;
+            if (solvedCount < 6) {
+                setTimeout(() => feedback.classList.add('opacity-0'), 2000);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
