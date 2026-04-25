@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Quiz: Adjektiv-Fokus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .word-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .word-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            background-color: #f8fafc;
+        }
+        .correct-anim {
+            animation: celebrate 0.5s ease-out;
+            background-color: #22c55e !important;
+            color: white !important;
+            border-color: #16a34a !important;
+        }
+        .wrong-anim {
+            animation: shake 0.4s ease-in-out;
+            background-color: #ef4444 !important;
+            color: white !important;
+            border-color: #dc2626 !important;
+        }
+        @keyframes celebrate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-6 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-800 mb-2">Adjektiv-Detektiv</h1>
+        <p class="text-slate-600 text-sm md:text-base">Klicke auf das Wort, das wie ein <span class="text-blue-600 font-bold">Adjektiv</span> dekliniert wird.</p>
+        
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-200 h-2 rounded-full mt-6">
+            <div id="progress" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 12.5%"></div>
+        </div>
+        <p id="level-counter" class="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Aufgabe 1 von 8</p>
+    </div>
+
+    <!-- Quiz Card -->
+    <div class="max-w-3xl w-full bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-slate-200 text-center">
+        
+        <div id="question-container">
+            <h2 class="text-lg md:text-xl font-medium text-slate-500 mb-8" id="instruction">
+                Suche das Adjektiv in diesem Ausdruck:
+            </h2>
+
+            <!-- Hotspot Word Area -->
+            <div id="word-display" class="flex flex-wrap justify-center gap-2 md:gap-3 mb-8">
+                <!-- Wörter werden dynamisch generiert -->
+            </div>
+        </div>
+
+        <!-- Feedback Message -->
+        <div id="feedback" class="h-12 flex items-center justify-center text-base md:text-lg font-bold transition-all duration-300 opacity-0">
+        </div>
+
+        <!-- Next Button -->
+        <button id="next-btn" class="hidden mx-auto mt-4 bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-full font-bold transition-all transform hover:scale-105 shadow-md">
+            Nächste Aufgabe →
+        </button>
+    </div>
+
+    <button id="restart-btn" class="mt-8 text-slate-400 hover:text-slate-600 text-xs underline uppercase tracking-widest">
+        Quiz zurücksetzen
+    </button>
+
+    <script>
+        const quizData = [
+            {
+                phrase: ["одна", "целая", "одна", "вторая"],
+                correctIndex: 1, // целая
+                explanation: "Richtig! 'целая' ist das Adjektiv im Singular."
+            },
+            {
+                phrase: ["две", "целых", "две", "пятых"],
+                correctIndex: 1, // целых
+                explanation: "Korrekt! 'целых' ist die Adjektivform im Plural."
+            },
+            {
+                phrase: ["к", "одной", "целой", "одной", "второй"],
+                correctIndex: 2, // целой
+                explanation: "Sehr gut! 'целой' ist das Adjektiv im Dativ (nach 'к')."
+            },
+            {
+                phrase: ["ноль", "целых", "fünf", "десятых"],
+                correctIndex: 1, // целых
+                explanation: "Genau! Auch bei Dezimalzahlen ist 'целых' das Adjektiv."
+            },
+            {
+                phrase: ["плюс", "одна", "целая", "одна", "вторая"],
+                correctIndex: 2, // целая
+                explanation: "Richtig erkannt!"
+            },
+            {
+                phrase: ["об", "одной", "целой", "одной", "второй"],
+                correctIndex: 2, // целой
+                explanation: "Ausgezeichnet! 'целой' steht hier im Präpositional."
+            },
+            {
+                phrase: ["двум", "целым", "двум", "пятым"],
+                correctIndex: 1, // целым
+                explanation: "Korrekt! 'целым' ist Dativ Plural."
+            },
+            {
+                phrase: ["вижу", "одну", "целую", "одну", "вторую"],
+                correctIndex: 2, // целую
+                explanation: "Super! 'целую' ist das Adjektiv im Akkusativ."
+            }
+        ];
+
+        let currentQuestion = 0;
+        let canClick = true;
+
+        const wordDisplay = document.getElementById('word-display');
+        const feedback = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const progress = document.getElementById('progress');
+        const levelCounter = document.getElementById('level-counter');
+
+        function loadQuestion() {
+            const data = quizData[currentQuestion];
+            wordDisplay.innerHTML = '';
+            feedback.classList.add('opacity-0');
+            nextBtn.classList.add('hidden');
+            canClick = true;
+
+            levelCounter.innerText = `Aufgabe ${currentQuestion + 1} von ${quizData.length}`;
+            progress.style.width = `${((currentQuestion + 1) / quizData.length) * 100}%`;
+
+            data.phrase.forEach((word, index) => {
+                const btn = document.createElement('button');
+                btn.className = "word-btn bg-white border-2 border-slate-200 px-4 py-2 md:px-6 md:py-3 rounded-xl text-lg md:text-xl font-bold text-slate-700 shadow-sm";
+                btn.innerText = word;
+                btn.onclick = () => handleChoice(index, btn);
+                wordDisplay.appendChild(btn);
+            });
+        }
+
+        function handleChoice(index, element) {
+            if (!canClick) return;
+
+            const data = quizData[currentQuestion];
+
+            if (index === data.correctIndex) {
+                // RICHTIG
+                canClick = false;
+                element.classList.add('correct-anim');
+                showFeedback(data.explanation, "text-green-600");
+                
+                if (currentQuestion < quizData.length - 1) {
+                    nextBtn.classList.remove('hidden');
+                } else {
+                    showFeedback("🏆 Geschafft! Du erkennst Adjektive in jedem Fall.", "text-blue-600");
+                }
+            } else {
+                // FALSCH
+                element.classList.add('wrong-anim');
+                showFeedback("Das ist kein Adjektiv. Probier es noch einmal!", "text-red-500");
+                setTimeout(() => {
+                    element.classList.remove('wrong-anim');
+                }, 400);
+            }
+        }
+
+        function showFeedback(text, colorClass) {
+            feedback.innerText = text;
+            feedback.className = `h-12 flex items-center justify-center text-base md:text-lg font-bold transition-all duration-300 opacity-100 ${colorClass}`;
+        }
+
+        nextBtn.onclick = () => {
+            currentQuestion++;
+            loadQuestion();
+        };
+
+        document.getElementById('restart-btn').onclick = () => {
+            currentQuestion = 0;
+            loadQuestion();
+        };
+
+        // Quiz starten
+        loadQuestion();
+    </script>
+</body>
+</html>
