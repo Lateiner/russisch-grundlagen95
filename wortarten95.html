@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Lernmodul: 10 Wörter Wortarten</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .word-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+        .word-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .selected {
+            ring: 4px solid #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(1.05);
+        }
+        .drop-zone {
+            transition: all 0.3s ease;
+            min-height: 150px;
+        }
+        .flash-error {
+            animation: flashRed 0.5s dashed;
+        }
+        @keyframes flashRed {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: #fecaca; border-color: #ef4444; }
+        }
+        .correct-pop {
+            animation: popIn 0.3s ease-out;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-4xl w-full text-center mb-6">
+        <h1 class="text-3xl font-bold text-slate-800 mb-2">Lektion 9: Wortarten erkennen</h1>
+        <p class="text-slate-600 italic">Analysiere die Bestandteile von Bruchzahlen (1 ½, 2 ⅖, 0,5...)</p>
+        
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-200 rounded-full h-2.5 mt-6 max-w-md mx-auto">
+            <div id="progress-bar" class="bg-green-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <p id="counter-text" class="text-sm text-slate-500 mt-2 font-medium border-b pb-4">Gelöst: 0 / 10</p>
+    </div>
+
+    <!-- Word Bank -->
+    <div id="words-container" class="max-w-4xl w-full flex flex-wrap justify-center gap-3 mb-8 p-6 bg-white rounded-2xl shadow-sm border border-slate-200">
+        <!-- 10 Wörter aus dem Video -->
+        <div id="w1" data-type="kardinal" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">одна</div>
+        <div id="w2" data-type="adjektiv" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">целая</div>
+        <div id="w3" data-type="ordinal" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">вторая</div>
+        <div id="w4" data-type="kardinal" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">две</div>
+        <div id="w5" data-type="adjektiv" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">целых</div>
+        <div id="w6" data-type="ordinal" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">пятых</div>
+        <div id="w7" data-type="kardinal" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">ноль</div>
+        <div id="w8" data-type="ordinal" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">десятых</div>
+        <div id="w9" data-type="kardinal" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">три</div>
+        <div id="w10" data-type="ordinal" class="word-card bg-white border-2 border-blue-200 px-4 py-2 rounded-xl text-lg font-medium text-slate-700 shadow-sm">сотых</div>
+    </div>
+
+    <!-- Target Zones -->
+    <div class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Kardinalzahl -->
+        <div data-target="kardinal" class="drop-zone bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl p-4 flex flex-col">
+            <h2 class="font-bold text-slate-500 mb-4 uppercase tracking-tighter text-xs text-center">Kardinalzahl (Grundzahl)</h2>
+            <div class="assigned-words grid grid-cols-1 gap-2"></div>
+        </div>
+
+        <!-- Adjektiv -->
+        <div data-target="adjektiv" class="drop-zone bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl p-4 flex flex-col">
+            <h2 class="font-bold text-slate-500 mb-4 uppercase tracking-tighter text-xs text-center">Adjektiv (Ganze)</h2>
+            <div class="assigned-words grid grid-cols-1 gap-2"></div>
+        </div>
+
+        <!-- Ordinalzahl -->
+        <div data-target="ordinal" class="drop-zone bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl p-4 flex flex-col">
+            <h2 class="font-bold text-slate-500 mb-4 uppercase tracking-tighter text-xs text-center">Ordinalzahl (Nenner)</h2>
+            <div class="assigned-words grid grid-cols-1 gap-2"></div>
+        </div>
+
+    </div>
+
+    <!-- Instant Feedback Message -->
+    <div id="status-msg" class="mt-8 px-6 py-3 rounded-full font-bold text-lg transition-all duration-300 opacity-0 transform translate-y-2">
+        Test
+    </div>
+
+    <button id="restart-btn" class="mt-8 text-slate-400 hover:text-slate-600 text-sm underline">
+        Aufgabe zurücksetzen
+    </button>
+
+    <script>
+        let selectedWord = null;
+        let correctCount = 0;
+        const totalWords = 10;
+
+        const words = document.querySelectorAll('.word-card');
+        const dropZones = document.querySelectorAll('.drop-zone');
+        const statusMsg = document.getElementById('status-msg');
+        const progressBar = document.getElementById('progress-bar');
+        const counterText = document.getElementById('counter-text');
+
+        // Selection
+        words.forEach(word => {
+            word.addEventListener('click', () => {
+                if (word.classList.contains('opacity-0')) return;
+                
+                words.forEach(w => w.classList.remove('selected'));
+                word.classList.add('selected');
+                selectedWord = word;
+            });
+        });
+
+        // Instant Feedback Assignment
+        dropZones.forEach(zone => {
+            zone.addEventListener('click', () => {
+                if (!selectedWord) return;
+
+                const targetType = zone.getAttribute('data-target');
+                const wordType = selectedWord.getAttribute('data-type');
+
+                if (targetType === wordType) {
+                    // CORRECT
+                    handleCorrect(zone, selectedWord);
+                } else {
+                    // INCORRECT
+                    handleIncorrect(zone);
+                }
+            });
+        });
+
+        function handleCorrect(zone, word) {
+            const container = zone.querySelector('.assigned-words');
+            
+            // Create visible card in box
+            const correctCard = document.createElement('div');
+            correctCard.className = "bg-green-500 text-white px-4 py-2 rounded-lg text-center font-bold correct-pop shadow-sm";
+            correctCard.innerText = word.innerText;
+            container.appendChild(correctCard);
+
+            // Update stats
+            correctCount++;
+            updateUI();
+
+            // Hide original
+            word.classList.remove('selected');
+            word.classList.add('opacity-0', 'pointer-events-none');
+            selectedWord = null;
+
+            showStatus("Richtig!", "bg-green-100", "text-green-700");
+            
+            if (correctCount === totalWords) {
+                setTimeout(() => {
+                    showStatus("🎉 Genial! Du hast alle Wortarten korrekt erkannt!", "bg-blue-600", "text-white");
+                }, 500);
+            }
+        }
+
+        function handleIncorrect(zone) {
+            zone.classList.add('flash-error');
+            setTimeout(() => zone.classList.remove('flash-error'), 500);
+            
+            showStatus("Das passt nicht. Probier eine andere Kategorie!", "bg-red-100", "text-red-700");
+            
+            if (selectedWord) {
+                selectedWord.classList.remove('selected');
+                selectedWord = null;
+            }
+        }
+
+        function updateUI() {
+            const percent = (correctCount / totalWords) * 100;
+            progressBar.style.width = percent + "%";
+            counterText.innerText = `Gelöst: ${correctCount} / ${totalWords}`;
+        }
+
+        function showStatus(text, bg, color) {
+            statusMsg.innerText = text;
+            statusMsg.className = `mt-8 px-6 py-3 rounded-full font-bold text-lg transition-all duration-300 opacity-100 transform translate-y-0 ${bg} ${color}`;
+            
+            setTimeout(() => {
+                statusMsg.classList.add('opacity-0');
+            }, 2000);
+        }
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            location.reload();
+        });
+    </script>
+</body>
+</html>
