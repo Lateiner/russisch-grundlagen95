@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Verbales Rechnen (отнять)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .option-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .correct {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+        .wrong {
+            background-color: #ef4444 !important;
+            border-color: #dc2626 !important;
+            color: white !important;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- Header -->
+    <div class="max-w-2xl w-full text-center mb-8">
+        <h1 class="text-3xl font-black text-slate-800 mb-2 tracking-tight">Verbales Rechnen 🧠</h1>
+        <p class="text-slate-600">Ergänze die Lücken passend zum Verb <span class="font-bold text-blue-600 italic">отнять</span>.</p>
+        
+        <!-- Progress -->
+        <div class="mt-6 flex justify-between items-end mb-2 px-1">
+            <span id="progress-text" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Aufgabe 1 / 8</span>
+            <span id="score-text" class="text-xs font-bold text-blue-500 uppercase tracking-widest">Score: 0</span>
+        </div>
+        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden shadow-inner">
+            <div id="progress-bar" class="bg-blue-600 h-full transition-all duration-500" style="width: 12.5%"></div>
+        </div>
+    </div>
+
+    <!-- Quiz Card -->
+    <div class="max-w-3xl w-full bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-slate-200">
+        
+        <div id="quiz-content" class="animate-in">
+            <!-- Math Context -->
+            <div class="text-center mb-8">
+                <div id="math-digits" class="text-2xl font-bold text-slate-400 mb-4 tracking-widest">1 ½ - 1 ½ = 0</div>
+                
+                <!-- The Sentence with gaps -->
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-lg md:text-xl text-slate-800 leading-relaxed">
+                    Если от <span id="gap-1" class="text-blue-600 font-bold border-b-2 border-blue-200 px-2">_______</span> 
+                    отнять <span id="gap-2" class="text-blue-600 font-bold border-b-2 border-blue-200 px-2">_______</span>, 
+                    будет нуль.
+                </div>
+            </div>
+
+            <p class="text-center text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Wähle die richtige Kombination:</p>
+            
+            <!-- Options Grid -->
+            <div id="options-grid" class="grid grid-cols-1 gap-3">
+                <!-- Buttons werden hier geladen -->
+            </div>
+        </div>
+
+        <!-- Feedback Area -->
+        <div id="feedback-area" class="hidden mt-8 pt-6 border-t border-slate-100 text-center animate-in">
+            <p id="feedback-msg" class="text-lg font-bold mb-2"></p>
+            <p id="explanation" class="text-slate-500 text-sm mb-6 leading-relaxed"></p>
+            <button id="next-btn" class="bg-slate-800 text-white px-10 py-3 rounded-full font-bold hover:bg-slate-900 transition-all shadow-lg">
+                Nächste Aufgabe →
+            </button>
+        </div>
+    </div>
+
+    <!-- Restart -->
+    <button onclick="location.reload()" class="mt-10 text-slate-400 hover:text-slate-600 text-xs font-bold underline uppercase tracking-widest transition-colors">
+        Quiz neu starten
+    </button>
+
+    <script>
+        const quizData = [
+            {
+                digits: "1 ½ - 1 ½ = 0",
+                options: [
+                    ["одной целой одной второй", "одну целую одну вторую"],
+                    ["одна целая одна вторая", "одной целой einer второй"],
+                    ["одной целой одной второй", "одной целой einer второй"]
+                ],
+                correct: 0,
+                info: "Richtig! 'от чего?' (Genitiv: одной целой...) und 'что?' (Akkusativ: одну целую...)."
+            },
+            {
+                digits: "2 ½ - 2 ½ = 0",
+                options: [
+                    ["две целых одну вторую", "две целых einer второй"],
+                    ["двух целых одной второй", "две целых одну вторую"],
+                    ["двум целым одной второй", "двух целых одной второй"]
+                ],
+                correct: 1,
+                info: "Korrekt! Von 2 (Genitiv Plural: двух целых...) ziehen wir 2 (Akkusativ: две целых...) ab."
+            },
+            {
+                digits: "0,5 - 0,5 = 0",
+                options: [
+                    ["ноль целых пять десятых", "ноля целых пяти десятых"],
+                    ["нолю целых пяти десятым", "ноля целых пяти десятых"],
+                    ["нуля целых пяти десятых", "ноль целых пять десятых"]
+                ],
+                correct: 2,
+                info: "Sehr gut! 'от чего?' (Genitiv: нуля/ноля целых...) und 'что?' (Akkusativ: ноль целых...)."
+            },
+            {
+                digits: "5 ⅖ - 5 ⅖ = 0",
+                options: [
+                    ["пяти целых двух пятых", "пять целых две пятых"],
+                    ["пять целых две пятых", "пяти целых двух пятых"],
+                    ["пятью целыми двумя пятыми", "пяти целых двух пятых"]
+                ],
+                correct: 0,
+                info: "Richtig! Genitiv (пяти целых...) und Akkusativ (пять целых...)."
+            },
+            {
+                digits: "1 ¾ - 1 ¾ = 0",
+                options: [
+                    ["одна целая три четвертых", "одной целой трех четвертых"],
+                    ["одной целой трех четвертых", "одну целую три четвертых"],
+                    ["одну целую три четвертых", "одной целой трех четвертых"]
+                ],
+                correct: 1,
+                info: "Genau! Genitiv Singular (одной целой...) und Akkusativ Singular (одну целую...)."
+            },
+            {
+                digits: "0,25 - 0,25 = 0",
+                options: [
+                    ["ноля целых двадцати пяти сотых", "ноль целых двадцать пять сотых"],
+                    ["ноль целых двадцать пять сотых", "ноля целых двадцати пяти сотых"],
+                    ["нолю целых двадцати пяти сотым", "ноль целых двадцать пять сотых"]
+                ],
+                correct: 0,
+                info: "Korrekt! Genitiv für die Ausgangszahl und Akkusativ für den Abzug."
+            },
+            {
+                digits: "10 ½ - 10 ½ = 0",
+                options: [
+                    ["десяти целых одной второй", "десять целых одну вторую"],
+                    ["десять целых одну вторую", "десяти целых одной второй"],
+                    ["десятью целыми одной второй", "десяти целых einer второй"]
+                ],
+                correct: 0,
+                info: "Sehr gut! 'десяти целых' (Genitiv) und 'десять целых' (Akkusativ)."
+            },
+            {
+                digits: "4 ½ - 4 ½ = 0",
+                options: [
+                    ["четыре целых одну вторую", "четырех целых einer второй"],
+                    ["четырех целых одной второй", "четыре целых одну вторую"],
+                    ["четырем целым одной второй", "четырех целых einer второй"]
+                ],
+                correct: 1,
+                info: "Richtig! 'четырех целых' (Genitiv) und 'четыре целых' (Akkusativ)."
+            }
+        ];
+
+        let currentIdx = 0;
+        let score = 0;
+        let canClick = true;
+
+        const mathDigits = document.getElementById('math-digits');
+        const gap1 = document.getElementById('gap-1');
+        const gap2 = document.getElementById('gap-2');
+        const optionsGrid = document.getElementById('options-grid');
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        const explanationEl = document.getElementById('explanation');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const scoreText = document.getElementById('score-text');
+
+        function loadTask() {
+            const data = quizData[currentIdx];
+            canClick = true;
+            feedbackArea.classList.add('hidden');
+            
+            mathDigits.innerText = data.digits;
+            gap1.innerText = "_______";
+            gap2.innerText = "_______";
+            
+            progressText.innerText = `Aufgabe ${currentIdx + 1} / ${quizData.length}`;
+            progressBar.style.width = `${((currentIdx + 1) / quizData.length) * 100}%`;
+
+            optionsGrid.innerHTML = '';
+            data.options.forEach((pair, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-card w-full text-left p-4 rounded-xl border-2 border-slate-200 bg-white font-medium text-slate-700 hover:bg-slate-50 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2";
+                
+                btn.innerHTML = `
+                    <span class="text-sm sm:text-base"><span class="text-slate-400 mr-2 text-xs">A:</span>${pair[0]}</span>
+                    <span class="text-sm sm:text-base"><span class="text-slate-400 mr-2 text-xs">B:</span>${pair[1]}</span>
+                `;
+                
+                btn.onclick = () => checkAnswer(idx, btn);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(idx, btn) {
+            if (!canClick) return;
+            canClick = false;
+
+            const data = quizData[currentIdx];
+            const isCorrect = (idx === data.correct);
+
+            if (isCorrect) {
+                score++;
+                btn.classList.add('correct');
+                feedbackMsg.innerText = "Hervorragend! ✨";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-green-600";
+            } else {
+                btn.classList.add('wrong');
+                feedbackMsg.innerText = "Leider nicht richtig... ❌";
+                feedbackMsg.className = "text-lg font-bold mb-2 text-red-600";
+                optionsGrid.children[data.correct].classList.add('correct');
+            }
+
+            // Fill gaps in the sentence
+            gap1.innerText = data.options[data.correct][0];
+            gap2.innerText = data.options[data.correct][1];
+
+            scoreText.innerText = `Score: ${score}`;
+            explanationEl.innerText = data.info;
+            feedbackArea.classList.remove('hidden');
+        }
+
+        nextBtn.onclick = () => {
+            currentIdx++;
+            if (currentIdx < quizData.length) {
+                loadTask();
+            } else {
+                showFinal();
+            }
+        };
+
+        function showFinal() {
+            document.getElementById('quiz-content').innerHTML = `
+                <div class="text-center py-10">
+                    <div class="text-6xl mb-6">🎯</div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Training beendet!</h2>
+                    <p class="text-xl text-slate-600 mb-4">Du hast ${score} von ${quizData.length} Kombinationen korrekt gewählt.</p>
+                    <p class="text-slate-400 text-sm">Du beherrschst nun die Fälle für die Subtraktion.</p>
+                </div>
+            `;
+            feedbackArea.classList.add('hidden');
+        }
+
+        loadTask();
+    </script>
+</body>
+</html>
